@@ -1,3 +1,5 @@
 -- List of links to webpage resources --
 1. scikit learn world of faces dataset - https://scikit-learn.org/0.19/datasets/labeled_faces.html
-2. Geeks for Geeks facial recognition with AI page - https://www.geeksforgeeks.org/machine-learning/face-recognition-using-artificial-intelligence/
+    - This dataset is used in code/get_faces.py to populate the training data face_recognition.py
+3. Face recognition tool tutorial - https://realpython.com/face-recognition-with-python/#step-3-recognize-unlabeled-faces
+    - This is the tutorial followed to create face_recognition.py

@@ -1,1 +1,16 @@
 .DS_Store
+
+# Face recognition datasets
+data/face_recognition_training/*
+data/face_recognition_validation/*
+data/face_recognition_test/*
+data/face_recognition_output/*
+
+# Keep folders
+!data/face_recognition_training/.gitkeep
+!data/face_recognition_validation/.gitkeep
+!data/face_recognition_test/.gitkeep
+!data/face_recognition_output/.gitkeep
+
+# Model artifacts
+*.pkl
