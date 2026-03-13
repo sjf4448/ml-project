@@ -1,5 +1,7 @@
--- List of links to webpage resources --
-1. scikit learn world of faces dataset - https://scikit-learn.org/0.19/datasets/labeled_faces.html
-    - This dataset is used in code/get_faces.py to populate the training data face_recognition.py
-3. Face recognition tool tutorial - https://realpython.com/face-recognition-with-python/#step-3-recognize-unlabeled-faces
-    - This is the tutorial followed to create face_recognition.py
+-- List of links to project resources --
+1. Scikit-learn LFW dataset
+   - https://scikit-learn.org/0.19/datasets/labeled_faces.html
+   - Used by `code/get_faces.py` (`LfwDatasetBuilder`) to create the training/validation folders.
+2. Real Python face recognition tutorial
+   - https://realpython.com/face-recognition-with-python/#step-3-recognize-unlabeled-faces
+   - Served as the baseline reference for the recognition flow in `code/face_finder.py`.

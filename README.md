@@ -1,118 +1,181 @@
-# Verified persons facial classification
+# Verified Persons Facial Classification
 
-## `code/face_recognition.py`
+This project is an educational face-recognition pipeline built around three stages:
 
-This module implements the **face detection and baseline recognition pipeline** used in the project. It is adapted from the Real Python face recognition tutorial and modified to match the project's directory structure and workflow.
+1. Build a labeled dataset (`get_faces.py`)
+2. Encode known people (`face_finder.py --train`)
+3. Detect and recognize faces in new images (`face_finder.py --test` / `--validate`)
 
-The primary purpose of this file is to:
+It also includes a small webcam app (`face_finder_app.py`) for interactive testing.
 
-1. **Detect faces in images**
-2. **Generate facial encodings for known individuals**
-3. **Recognize known faces in new images**
-4. **Export cropped faces and metadata for downstream models**
+## Project Layout
 
-This script serves as the **preprocessing stage** for the broader facial classification system.
+```text
+ml-project/
+  code/
+    face_finder.py              # Main CLI (training, test, validation)
+    face_finder_app.py          # Webcam capture + recognition app
+    get_faces.py                # LFW dataset preparation script
+    face_finder_core/           # Refactored, class-based implementation
+      __init__.py
+      cli.py
+      config.py
+      dataset.py
+      recognition.py
+      training.py
+      validation.py
+      webcam.py
+  data/
+    face_recognition_training/  # Known identities (one folder per person)
+    face_recognition_validation/# Validation set
+    face_recognition_test/      # Ad-hoc test images / webcam captures
+    face_recognition_output/
+      encodings.pkl             # Serialized known-face embeddings
+      annotated/                # Images with boxes + labels
+      crops/                    # Cropped face images
+      metadata/                 # JSON for each processed image
+  resources/
+    resources.txt               # Source/tutorial links used in the project
+```
 
----
+## How the Program Works
 
-### Directory Structure
+### 1) Dataset preparation (`code/get_faces.py`)
 
-The script assumes the following project layout:
-data/
-├── face_recognition_training/
-│ ├── person_a/
-│ │ ├── img1.jpg
-│ │ └── img2.jpg
-│ └── person_b/
-│ ├── img1.jpg
-│ └── img2.jpg
-│
-├── face_recognition_validation/
-│ ├── image1.jpg
-│ └── image2.jpg
-│
-└── face_recognition_output/
-├── annotated/ # images with bounding boxes and labels
-├── crops/ # cropped faces extracted from images
-└── metadata/ # JSON detection metadata
+- Uses `scikit-learn` `fetch_lfw_people` to download LFW faces.
+- Writes images into this project structure:
+  - `data/face_recognition_training/<person_name>/...`
+  - `data/face_recognition_validation/<person_name>/...`
+- Splits per identity: first `N` images for validation, remainder for training.
 
----
+Core class: `face_finder_core.dataset.LfwDatasetBuilder`
 
-### Key Features
+### 2) Training / encoding (`code/face_finder.py --train`)
 
-#### Training (`--train`)
-Encodes known faces from the training dataset and saves them to:
-data/face_recognition_output/encodings.pkl
+- Reads all images in `data/face_recognition_training/*/*`.
+- Detects faces and computes 128-d embeddings with `face_recognition`.
+- Saves known names + embeddings to `data/face_recognition_output/encodings.pkl`.
 
-Each subdirectory name in `face_recognition_training` is treated as the **identity label**.
+Core class: `face_finder_core.training.FaceEncoder`
 
-Example:
-face_recognition_training/
-alice/
-bob/
+### 3) Recognition (`code/face_finder.py --test`)
 
----
+- Loads the saved encodings file.
+- Detects faces in a target image.
+- Compares each detected face embedding to known embeddings.
+- Assigns the best matching identity (or `Unknown`).
+- Saves:
+  - Annotated image (box + label)
+  - Cropped face image(s)
+  - JSON metadata with box coordinates and distance score
 
-#### Face Detection and Recognition (`--test`)
-Detects faces in an input image and attempts to match them against the known encodings.
+Core class: `face_finder_core.recognition.FaceRecognizer`
 
-For each detected face the script:
+### 4) Batch validation (`code/face_finder.py --validate`)
 
-- identifies the best matching known person (if any)
-- draws a bounding box around the face
-- saves a cropped face image
-- records metadata about the detection
+- Runs recognition on every file in `data/face_recognition_validation/`.
+- Produces the same output artifacts as single-image testing.
 
-Outputs include:
-annotated/<image>annotated.png
-crops/<image>face<n><label>.png
-metadata/<image>_detections.json
+Core class: `face_finder_core.validation.ValidationRunner`
 
----
+### 5) Webcam app (`code/face_finder_app.py`)
 
-#### Validation (`--validate`)
-Runs recognition on every image inside:
-data/face_recognition_validation/
+- Opens webcam preview.
+- Shows lightweight live face boxes.
+- Press `SPACE` to capture, then runs recognition on that frame.
+- Opens the resulting annotated image.
 
-This is useful for evaluating detection performance before integrating the classifier.
+Core class: `face_finder_core.webcam.WebcamCaptureSession`
 
----
+## Why the Code Was Split Into Classes
 
-### Example Usage
+The original script had all pipeline steps in one file. It is now split by responsibility so students can inspect one concept at a time:
 
-Train encodings:
+- `config.py`: all shared paths/constants
+- `dataset.py`: data download + folder split
+- `training.py`: known-face encoding
+- `recognition.py`: matching + artifact export
+- `validation.py`: batch processing logic
+- `webcam.py`: webcam interaction flow
+- `cli.py`: argument parsing and command dispatch
+
+The top-level scripts remain as thin wrappers so existing commands still work.
+
+## Installation
+
+Create and activate a virtual environment, then install dependencies.
 
 ```bash
-python code/face_recognition.py --train
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install face_recognition opencv-python pillow scikit-learn numpy
 ```
-Run validation on a dataset:
-```bash
-python code/face_recognition.py --validate
-```
-Test on a single image:
-```bash
-python code/face_recognition.py --test --file path/to/image.jpg
-```
-Display results visually:
-```bash
-python code/face_recognition.py --test --file image.jpg --show
-```
-### Role in the Overall Project
-This module acts as the **face localization and preprocessing stage** of the facial classification system.
-Pipeline:
 
-Image
-   ↓
-Face Detection (this script)
-   ↓
-Face Cropping
-   ↓
-Classifier Model
-   ↓
-Final Identity Prediction
+Notes:
+- `face_recognition` depends on `dlib`, which may require build tools on some systems.
+- On Apple Silicon/macOS, installation time can vary depending on local toolchain setup.
 
-Even if a separate deep learning classifier is used later, this script provides:
-reliable face localization
-standardized face crops
-metadata for evaluation
-a baseline recognition system for comparison
+## Usage
+
+Run commands from the project root (`ml-project/`).
+
+### Prepare dataset (optional if you already have images)
+
+```bash
+python code/get_faces.py
+```
+
+### Train known encodings
+
+```bash
+python code/face_finder.py --train
+```
+
+### Test a single image
+
+```bash
+python code/face_finder.py --test --file data/face_recognition_test/sam1.png
+```
+
+### Test and display annotated image
+
+```bash
+python code/face_finder.py --test --file data/face_recognition_test/sam1.png --show
+```
+
+### Run batch validation
+
+```bash
+python code/face_finder.py --validate
+```
+
+### Launch webcam app
+
+```bash
+python code/face_finder_app.py
+```
+
+## Output Files
+
+After recognition, look in `data/face_recognition_output/`:
+
+- `annotated/<image>_annotated.png`
+- `crops/<image>_face_<n>_<label>.png`
+- `metadata/<image>_detections.json`
+
+`metadata` JSON records:
+- predicted name
+- bounding box (`top`, `right`, `bottom`, `left`)
+- distance score (`confidence_distance`, lower means closer)
+- crop path
+
+## Learning Notes
+
+- Recognition quality depends heavily on training image quality and variety.
+- Lower `--tolerance` gives stricter matching (fewer false positives, more unknowns).
+- `hog` model is CPU-friendly; `cnn` can be more accurate but needs stronger hardware.
+
+## Resource Links
+
+See `resources/resources.txt` for source references used to build this project.

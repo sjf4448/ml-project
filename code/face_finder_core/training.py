@@ -1,0 +1,84 @@
+from __future__ import annotations
+
+import pickle
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import face_recognition
+
+from .config import ENCODINGS_PATH, TRAINING_DIR, ensure_directories
+
+
+@dataclass
+class TrainingSummary:
+    """Simple report object returned after encoding known faces."""
+
+    encoded_faces: int
+    processed_images: int
+    skipped_images: int
+    encodings_path: str
+
+
+class FaceEncoder:
+    """Builds a gallery of known face encodings from labeled folders.
+
+    Folder convention:
+        data/face_recognition_training/<person_name>/<image files>
+
+    Each subdirectory name is used as that person's identity label.
+    """
+
+    def __init__(self, training_dir: Path = TRAINING_DIR, encodings_path: Path = ENCODINGS_PATH):
+        self.training_dir = training_dir
+        self.encodings_path = encodings_path
+
+    def encode_known_faces(self, model: str = "hog") -> TrainingSummary:
+        """Extract and save one or more facial embeddings for each training image."""
+        ensure_directories()
+
+        names: list[str] = []
+        encodings: list[Any] = []
+        processed_files = 0
+        skipped_files = 0
+
+        for filepath in self.training_dir.glob("*/*"):
+            if not filepath.is_file():
+                continue
+
+            processed_files += 1
+            person_label = filepath.parent.name
+            image = face_recognition.load_image_file(filepath)
+
+            face_locations = face_recognition.face_locations(image, model=model)
+            face_encodings = face_recognition.face_encodings(image, face_locations)
+
+            if not face_encodings:
+                skipped_files += 1
+                print(f"[WARN] No faces found in training image: {filepath}")
+                continue
+
+            for encoding in face_encodings:
+                names.append(person_label)
+                encodings.append(encoding)
+
+        if not encodings:
+            raise RuntimeError(
+                "No face encodings were created. Check that your training folders contain valid images with visible faces."
+            )
+
+        payload = {"names": names, "encodings": encodings}
+        with self.encodings_path.open("wb") as handle:
+            pickle.dump(payload, handle)
+
+        summary = TrainingSummary(
+            encoded_faces=len(encodings),
+            processed_images=processed_files,
+            skipped_images=skipped_files,
+            encodings_path=str(self.encodings_path),
+        )
+        print(
+            f"Saved {summary.encoded_faces} encodings from {summary.processed_images - summary.skipped_images} usable training images to {summary.encodings_path}"
+        )
+        return summary
+
