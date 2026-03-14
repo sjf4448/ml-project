@@ -81,7 +81,9 @@ Core class: `face_finder_core.validation.ValidationRunner`
 ### 5) Webcam app (`code/face_finder_app.py`)
 
 - Opens webcam preview.
-- Shows lightweight live face boxes.
+- Shows live face boxes with identity coloring:
+  - Green: recognized as a known person
+  - Red: not matched (Unknown)
 - Press `SPACE` to capture, then runs recognition on that frame.
 - Opens the resulting annotated image.
 
@@ -155,6 +157,22 @@ python code/face_finder.py --validate
 ```bash
 python code/face_finder_app.py
 ```
+
+### Launch webcam app with a specific camera index (macOS tip)
+
+```bash
+python code/face_finder_app.py --camera-index 1
+```
+
+If Continuity Camera opens by default, try `--camera-index 1` or `--camera-index 2`.
+
+### Launch webcam app with custom recognition tolerance
+
+```bash
+python code/face_finder_app.py --tolerance 0.5
+```
+
+Tip: lower tolerance is stricter, so fewer faces are marked as known.
 
 ## Output Files
 

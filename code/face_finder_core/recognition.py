@@ -35,11 +35,26 @@ class DetectionResult:
     crop_path: str | None
 
 
+@dataclass
+class LiveDetection:
+    """Lightweight result used by live webcam preview rendering."""
+
+    top: int
+    right: int
+    bottom: int
+    left: int
+    label: str
+    is_known: bool
+    confidence_distance: float | None
+
+
 class FaceRecognizer:
     """Runs face detection + identity matching for one input image."""
 
     def __init__(self, encodings_location: Path = ENCODINGS_PATH):
         self.encodings_location = encodings_location
+        self._known_encodings_cache: dict[str, list[Any]] | None = None
+        self._missing_encodings_warned = False
 
     def _load_known_encodings(self) -> dict[str, list[Any]]:
         if not self.encodings_location.exists():
@@ -49,6 +64,26 @@ class FaceRecognizer:
 
         with self.encodings_location.open("rb") as handle:
             return pickle.load(handle)
+
+    def _get_known_encodings(self, allow_missing: bool) -> dict[str, list[Any]]:
+        """Load encodings once and reuse them across repeated recognition calls."""
+        if self._known_encodings_cache is not None:
+            return self._known_encodings_cache
+
+        try:
+            self._known_encodings_cache = self._load_known_encodings()
+        except FileNotFoundError:
+            if not allow_missing:
+                raise
+            if not self._missing_encodings_warned:
+                print(
+                    f"[WARN] Encodings file not found at {self.encodings_location}. "
+                    "Run training first; live preview will mark faces as Unknown."
+                )
+                self._missing_encodings_warned = True
+            self._known_encodings_cache = {"names": [], "encodings": []}
+
+        return self._known_encodings_cache
 
     @staticmethod
     def _recognize_face(
@@ -121,7 +156,7 @@ class FaceRecognizer:
     ) -> list[DetectionResult]:
         """Recognize all faces in a single image and optionally save artifacts."""
         ensure_directories()
-        loaded_encodings = self._load_known_encodings()
+        loaded_encodings = self._get_known_encodings(allow_missing=False)
 
         input_image_path = Path(image_location)
         input_image = face_recognition.load_image_file(input_image_path)
@@ -187,4 +222,38 @@ class FaceRecognizer:
             pillow_image.show()
 
         return results
+
+    def recognize_frame_faces(
+        self,
+        rgb_frame: Any,
+        model: str = "hog",
+        tolerance: float = 0.6,
+        allow_missing_encodings: bool = False,
+    ) -> list[LiveDetection]:
+        """Recognize faces in an RGB frame for low-latency webcam overlays."""
+        loaded_encodings = self._get_known_encodings(allow_missing=allow_missing_encodings)
+        face_locations = face_recognition.face_locations(rgb_frame, model=model)
+        face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+
+        detections: list[LiveDetection] = []
+        for bounding_box, unknown_encoding in zip(face_locations, face_encodings):
+            name, best_distance = self._recognize_face(
+                unknown_encoding=unknown_encoding,
+                loaded_encodings=loaded_encodings,
+                tolerance=tolerance,
+            )
+            label = name if name else "Unknown"
+            detections.append(
+                LiveDetection(
+                    top=bounding_box[0],
+                    right=bounding_box[1],
+                    bottom=bounding_box[2],
+                    left=bounding_box[3],
+                    label=label,
+                    is_known=label != "Unknown",
+                    confidence_distance=best_distance,
+                )
+            )
+
+        return detections
 

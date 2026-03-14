@@ -6,19 +6,27 @@ import time
 from pathlib import Path
 
 import cv2
-import face_recognition
 
 from .config import ANNOTATED_DIR, TEST_DIR, ensure_directories
 from .recognition import FaceRecognizer
 
 WINDOW_NAME = "Face Finder App"
+KNOWN_FACE_COLOR = (0, 255, 0)
+UNKNOWN_FACE_COLOR = (0, 0, 255)
 
 
 class WebcamCaptureSession:
     """Handles webcam capture and immediate recognition on the captured frame."""
 
-    def __init__(self, recognizer: FaceRecognizer):
+    def __init__(
+        self,
+        recognizer: FaceRecognizer,
+        tolerance: float = 0.6,
+        camera_index: int = 0,
+    ):
         self.recognizer = recognizer
+        self.tolerance = tolerance
+        self.camera_index = camera_index
 
     @staticmethod
     def open_file(path: Path) -> None:
@@ -37,12 +45,12 @@ class WebcamCaptureSession:
         """Capture one webcam image while drawing lightweight live face hints."""
         ensure_directories()
 
-        camera = cv2.VideoCapture(0)
+        camera = cv2.VideoCapture(self.camera_index)
         if not camera.isOpened():
-            print("[ERROR] Could not open webcam.")
+            print(f"[ERROR] Could not open webcam at camera index {self.camera_index}.")
             return None
 
-        print("Webcam opened.")
+        print(f"Webcam opened at camera index {self.camera_index}.")
         print("Press SPACE to capture a photo.")
         print("Press Q to quit.")
 
@@ -50,7 +58,7 @@ class WebcamCaptureSession:
         frame_count = 0
         process_every_n_frames = 2
         scale = 0.25
-        cached_face_locations: list[tuple[int, int, int, int]] = []
+        cached_detections: list[tuple[int, int, int, int, str, bool]] = []
 
         try:
             while True:
@@ -65,28 +73,43 @@ class WebcamCaptureSession:
                     # Run detection on a downscaled frame for smoother preview.
                     small_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
                     rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-                    small_face_locations = face_recognition.face_locations(
-                        rgb_small_frame,
+                    live_detections = self.recognizer.recognize_frame_faces(
+                        rgb_frame=rgb_small_frame,
                         model="hog",
+                        tolerance=self.tolerance,
+                        allow_missing_encodings=True,
                     )
 
-                    cached_face_locations = [
+                    cached_detections = [
                         (
-                            int(top / scale),
-                            int(right / scale),
-                            int(bottom / scale),
-                            int(left / scale),
+                            int(detection.top / scale),
+                            int(detection.right / scale),
+                            int(detection.bottom / scale),
+                            int(detection.left / scale),
+                            detection.label,
+                            detection.is_known,
                         )
-                        for top, right, bottom, left in small_face_locations
+                        for detection in live_detections
                     ]
 
                 display_frame = frame.copy()
-                for top, right, bottom, left in cached_face_locations:
-                    cv2.rectangle(display_frame, (left, top), (right, bottom), (0, 255, 0), 2)
+                for top, right, bottom, left, label, is_known in cached_detections:
+                    color = KNOWN_FACE_COLOR if is_known else UNKNOWN_FACE_COLOR
+                    cv2.rectangle(display_frame, (left, top), (right, bottom), color, 2)
+                    cv2.putText(
+                        display_frame,
+                        label,
+                        (left, max(20, top - 10)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        color,
+                        2,
+                        cv2.LINE_AA,
+                    )
 
                 cv2.putText(
                     display_frame,
-                    f"Faces detected: {len(cached_face_locations)}",
+                    f"Faces detected: {len(cached_detections)}",
                     (20, 30),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.8,
@@ -129,6 +152,7 @@ class WebcamCaptureSession:
         results = self.recognizer.recognize_faces(
             image_location=str(image_path),
             model="hog",
+            tolerance=self.tolerance,
             save_output=True,
             show_image=False,
         )

@@ -19,7 +19,7 @@ from .config import (
     VALIDATION_DIR,
     ensure_directories,
 )
-from .recognition import DetectionResult, FaceRecognizer
+from .recognition import DetectionResult, FaceRecognizer, LiveDetection
 from .training import FaceEncoder
 from .validation import ValidationRunner
 
@@ -30,6 +30,7 @@ __all__ = [
     "ENCODINGS_PATH",
     "FaceEncoder",
     "FaceRecognizer",
+    "LiveDetection",
     "METADATA_DIR",
     "OUTPUT_DIR",
     "TRAINING_DIR",
