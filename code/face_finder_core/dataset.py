@@ -9,27 +9,29 @@ import numpy as np
 from PIL import Image
 from sklearn.datasets import fetch_lfw_people
 
-from .config import TRAINING_DIR, VALIDATION_DIR
+from .config import KNOWN_DIR, TRAINING_DIR, VALIDATION_DIR
+
+
+def safe_name(name: str) -> str:
+    """Convert a person's display name into a filesystem-safe folder name."""
+    return name.strip().lower().replace(" ", "_")
+
+
+def clear_directory(path: Path) -> None:
+    """Delete and recreate a directory so old files do not mix with new splits."""
+    if path.exists():
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
 
 
 class LfwDatasetBuilder:
     """Downloads LFW and writes it into this project's folder structure."""
 
-    def __init__(self, training_dir: Path = TRAINING_DIR, validation_dir: Path = VALIDATION_DIR):
+    def __init__(
+        self, training_dir: Path = TRAINING_DIR, validation_dir: Path = VALIDATION_DIR
+    ):
         self.training_dir = training_dir
         self.validation_dir = validation_dir
-
-    @staticmethod
-    def safe_name(name: str) -> str:
-        """Convert a person's display name into a filesystem-safe folder name."""
-        return name.strip().lower().replace(" ", "_")
-
-    @staticmethod
-    def clear_directory(path: Path) -> None:
-        """Delete and recreate a directory so old files do not mix with new splits."""
-        if path.exists():
-            shutil.rmtree(path)
-        path.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
     def save_image(image_array: np.ndarray, output_path: Path) -> None:
@@ -62,15 +64,15 @@ class LfwDatasetBuilder:
         print(f"Loaded {len(lfw_people.images)} images")
         print(f"Loaded {len(lfw_people.target_names)} identities")
 
-        self.clear_directory(self.training_dir)
-        self.clear_directory(self.validation_dir)
+        clear_directory(self.training_dir)
+        clear_directory(self.validation_dir)
 
         per_person_counts: dict[str, int] = {}
         train_count = 0
         val_count = 0
 
         for person_index, person_name in enumerate(lfw_people.target_names):
-            folder_name = self.safe_name(person_name)
+            folder_name = safe_name(person_name)
 
             person_train_dir = self.training_dir / folder_name
             person_val_dir = self.validation_dir / folder_name
