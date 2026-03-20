@@ -9,6 +9,7 @@ from typing import Any
 
 import face_recognition
 from PIL import Image, ImageDraw
+from tqdm import tqdm
 
 from .config import (
     ANNOTATED_DIR,
@@ -103,7 +104,9 @@ class FaceRecognizer:
             unknown_encoding,
             tolerance=tolerance,
         )
-        face_distances = face_recognition.face_distance(known_encodings, unknown_encoding)
+        face_distances = face_recognition.face_distance(
+            known_encodings, unknown_encoding
+        )
 
         votes = Counter(name for match, name in zip(matches, known_names) if match)
         best_distance = float(face_distances.min()) if len(face_distances) else None
@@ -121,8 +124,12 @@ class FaceRecognizer:
     ) -> None:
         """Draw a rectangle and text label for one face."""
         top, right, bottom, left = bounding_box
-        draw.rectangle(((left, top), (right, bottom)), outline=BOUNDING_BOX_COLOR, width=3)
-        text_left, text_top, text_right, text_bottom = draw.textbbox((left, bottom), label)
+        draw.rectangle(
+            ((left, top), (right, bottom)), outline=BOUNDING_BOX_COLOR, width=3
+        )
+        text_left, text_top, text_right, text_bottom = draw.textbbox(
+            (left, bottom), label
+        )
         draw.rectangle(
             ((text_left, text_top), (text_right, text_bottom)),
             fill=BOUNDING_BOX_COLOR,
@@ -161,7 +168,9 @@ class FaceRecognizer:
         input_image_path = Path(image_location)
         input_image = face_recognition.load_image_file(input_image_path)
         input_face_locations = face_recognition.face_locations(input_image, model=model)
-        input_face_encodings = face_recognition.face_encodings(input_image, input_face_locations)
+        input_face_encodings = face_recognition.face_encodings(
+            input_image, input_face_locations
+        )
 
         pillow_image = Image.fromarray(input_image)
         draw = ImageDraw.Draw(pillow_image)
@@ -203,7 +212,7 @@ class FaceRecognizer:
                     crop_path=crop_path,
                 )
             )
-            print(f"{name}: box={bounding_box}, best_distance={best_distance}")
+            tqdm.write(f"{name}: box={bounding_box}, best_distance={best_distance}")
 
         del draw
 
@@ -215,8 +224,8 @@ class FaceRecognizer:
                 json.dumps([asdict(result) for result in results], indent=2),
                 encoding="utf-8",
             )
-            print(f"Annotated image saved to {annotated_path}")
-            print(f"Detection metadata saved to {metadata_path}")
+            tqdm.write(f"Annotated image saved to {annotated_path}")
+            tqdm.write(f"Detection metadata saved to {metadata_path}")
 
         if show_image:
             pillow_image.show()
@@ -231,7 +240,9 @@ class FaceRecognizer:
         allow_missing_encodings: bool = False,
     ) -> list[LiveDetection]:
         """Recognize faces in an RGB frame for low-latency webcam overlays."""
-        loaded_encodings = self._get_known_encodings(allow_missing=allow_missing_encodings)
+        loaded_encodings = self._get_known_encodings(
+            allow_missing=allow_missing_encodings
+        )
         face_locations = face_recognition.face_locations(rgb_frame, model=model)
         face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
 
@@ -256,4 +267,3 @@ class FaceRecognizer:
             )
 
         return detections
-

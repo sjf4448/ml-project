@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import face_recognition
+from tqdm import tqdm
 
 from .config import ENCODINGS_PATH, TRAINING_DIR, ensure_directories
 
@@ -29,7 +30,9 @@ class FaceEncoder:
     Each subdirectory name is used as that person's identity label.
     """
 
-    def __init__(self, training_dir: Path = TRAINING_DIR, encodings_path: Path = ENCODINGS_PATH):
+    def __init__(
+        self, training_dir: Path = TRAINING_DIR, encodings_path: Path = ENCODINGS_PATH
+    ):
         self.training_dir = training_dir
         self.encodings_path = encodings_path
 
@@ -42,10 +45,9 @@ class FaceEncoder:
         processed_files = 0
         skipped_files = 0
 
-        for filepath in self.training_dir.glob("*/*"):
-            if not filepath.is_file():
-                continue
+        all_files = [f for f in self.training_dir.glob("*/*") if f.is_file()]
 
+        for filepath in tqdm(all_files, desc="Encoding faces", unit="img"):
             processed_files += 1
             person_label = filepath.parent.name
             image = face_recognition.load_image_file(filepath)
@@ -55,7 +57,7 @@ class FaceEncoder:
 
             if not face_encodings:
                 skipped_files += 1
-                print(f"[WARN] No faces found in training image: {filepath}")
+                tqdm.write(f"[WARN] No faces found in training image: {filepath}")
                 continue
 
             for encoding in face_encodings:
@@ -81,4 +83,3 @@ class FaceEncoder:
             f"Saved {summary.encoded_faces} encodings from {summary.processed_images - summary.skipped_images} usable training images to {summary.encodings_path}"
         )
         return summary
-
