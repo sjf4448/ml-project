@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pickle
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,15 @@ class TrainingSummary:
     processed_images: int
     skipped_images: int
     encodings_path: str
+
+
+def _encode_file(filepath: Path, model: str):
+    """Required for pickling when using ProcessPoolExecutor"""
+    person_label = filepath.parent.name
+    image = face_recognition.load_image_file(filepath)
+    face_locations = face_recognition.face_locations(image, model=model)
+    face_encodings = face_recognition.face_encodings(image, face_locations)
+    return person_label, face_encodings, len(face_encodings) == 0
 
 
 class FaceEncoder:
@@ -47,22 +57,24 @@ class FaceEncoder:
 
         all_files = [f for f in self.training_dir.glob("*/*") if f.is_file()]
 
-        for filepath in tqdm(all_files, desc="Encoding faces", unit="img"):
-            processed_files += 1
-            person_label = filepath.parent.name
-            image = face_recognition.load_image_file(filepath)
-
-            face_locations = face_recognition.face_locations(image, model=model)
-            face_encodings = face_recognition.face_encodings(image, face_locations)
-
-            if not face_encodings:
-                skipped_files += 1
-                tqdm.write(f"[WARN] No faces found in training image: {filepath}")
-                continue
-
-            for encoding in face_encodings:
-                names.append(person_label)
-                encodings.append(encoding)
+        with ProcessPoolExecutor() as executor:
+            futures = {executor.submit(_encode_file, f, model): f for f in all_files}
+            for future in tqdm(
+                as_completed(futures),
+                total=len(all_files),
+                desc="Encoding faces",
+                unit="img",
+            ):
+                filepath = futures[future]
+                processed_files += 1
+                person_label, face_encodings, skipped = future.result()
+                if skipped:
+                    skipped_files += 1
+                    tqdm.write(f"[WARN] No faces found in training image: {filepath}")
+                    continue
+                for encoding in face_encodings:
+                    names.append(person_label)
+                    encodings.append(encoding)
 
         if not encodings:
             raise RuntimeError(
@@ -83,3 +95,12 @@ class FaceEncoder:
             f"Saved {summary.encoded_faces} encodings from {summary.processed_images - summary.skipped_images} usable training images to {summary.encodings_path}"
         )
         return summary
+
+
+# Stops infinite loops in edge cases
+def main():
+    return
+
+
+if __name__ == "__main__":
+    main()
