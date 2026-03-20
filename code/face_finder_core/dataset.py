@@ -107,7 +107,7 @@ class LfwDatasetBuilder:
             print(f"  {name}: {count}")
 
 
-class KnownFacesImport:
+class KnownFacesImporter:
     """Imports known faces and their folders into testing, validation, and training dataset folders"""
 
     def __init__(

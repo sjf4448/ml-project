@@ -6,7 +6,7 @@ study dataset preparation in a focused module.
 
 from __future__ import annotations
 
-from face_finder_core.dataset import LfwDatasetBuilder
+from face_finder_core.dataset import KnownFacesImporter, LfwDatasetBuilder
 
 
 def populate_lfw_folders(
@@ -23,9 +23,21 @@ def populate_lfw_folders(
     )
 
 
+def import_known_faces(
+    min_faces_per_person: int = 3, validation_images_per_person: int = 1
+) -> None:
+    """Wrapper function for KnownFacesImport"""
+    importer = KnownFacesImporter()
+    importer.import_faces(
+        min_faces=min_faces_per_person,
+        validation_image_per=validation_images_per_person,
+    )
+
+
 if __name__ == "__main__":
     populate_lfw_folders(
         min_faces_per_person=20,
         resize=0.5,
         validation_images_per_person=2,
     )
+    import_known_faces(min_faces_per_person=3, validation_images_per_person=1)
