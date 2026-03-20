@@ -47,6 +47,9 @@ ml-project/
   - `data/face_recognition_training/<person_name>/...`
   - `data/face_recognition_validation/<person_name>/...`
 - Splits per identity: first `N` images for validation, remainder for training.
+- User provided faces are placed into `data/known_faces/<name>`
+  - name should be in format: `first last`
+- will also be written into the above project structure
 
 Core class: `face_finder_core.dataset.LfwDatasetBuilder`
 
