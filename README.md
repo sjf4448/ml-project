@@ -91,13 +91,19 @@ Core class: `face_finder_core.webcam.WebcamCaptureSession`
 
 ## Installation
 
-Create and activate a virtual environment, then install dependencies.
+Create and activate a virtual environment, then install dependencies. `uv` has also set up, so `uv sync` will also work.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
+```
+
+**OR** 
+
+```bash
+uv sync
 ```
 
 ## Usage
