@@ -16,7 +16,7 @@ ml-project/
     face_finder.py              # Main CLI (training, test, validation)
     face_finder_app.py          # Webcam capture + recognition app
     get_faces.py                # LFW dataset preparation script
-    face_finder_core/           # Refactored, class-based implementation
+    face_finder_core/           
       __init__.py
       cli.py
       config.py
