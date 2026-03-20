@@ -51,7 +51,7 @@ ml-project/
   - name should be in format: `first last`
 - will also be written into the above project structure
 
-Core class: `face_finder_core.dataset.LfwDatasetBuilder`, 'face_finder_core.dataset.KnownFacesImporter`
+Core class: `face_finder_core.dataset.LfwDatasetBuilder`, `face_finder_core.dataset.KnownFacesImporter`
 
 ### 2) Training / encoding (`code/face_finder.py --train`)
 
