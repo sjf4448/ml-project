@@ -111,7 +111,7 @@ Create and activate a virtual environment, then install dependencies.
 python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install face_recognition opencv-python pillow scikit-learn numpy
+pip install -r requirements.txt
 ```
 
 Notes:
