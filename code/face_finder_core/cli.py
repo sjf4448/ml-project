@@ -5,7 +5,7 @@ import argparse
 from .recognition import FaceRecognizer
 from .training import FaceEncoder
 from .validation import ValidationRunner
-
+from .generate_statistics import generate_statistics
 
 def build_parser() -> argparse.ArgumentParser:
     """Create CLI arguments for training, validation, and single-image testing."""
@@ -39,6 +39,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Display the annotated image after processing",
     )
+    parser.add_argument(
+        "--statistics",
+        action="store_true",
+        help="Generate statistics about the validation"
+    )
     return parser
 
 
@@ -67,7 +72,10 @@ def main() -> None:
             save_output=True,
             show_image=args.show,
         )
+        
+    if args.statistics:
+        generate_statistics()
 
-    if not any([args.train, args.validate, args.test]):
+    if not any([args.train, args.validate, args.test, args.statistics]):
         parser.print_help()
 
