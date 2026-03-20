@@ -106,3 +106,81 @@ class LfwDatasetBuilder:
         for name, count in sorted(per_person_counts.items()):
             print(f"  {name}: {count}")
 
+
+class KnownFacesImport:
+    """Imports known faces and their folders into testing, validation, and training dataset folders"""
+
+    def __init__(
+        self,
+        training_dir: Path = TRAINING_DIR,
+        validation_dir: Path = VALIDATION_DIR,
+        known_dir: Path = KNOWN_DIR,
+    ):
+        self.training_dir = training_dir
+        self.validation_dir = validation_dir
+        self.known_dir = known_dir
+
+    def import_faces(self, min_faces: int = 3, validation_image_per: int = 1):
+        """Imports known faces from the known faces directory"""
+        face_path = Path(self.known_dir)
+        faces_folder = [folder for folder in face_path.iterdir() if folder.is_dir()]
+        VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
+
+        train_count = 0
+        val_count = 0
+        skipped = []
+        per_person_counts = {}
+
+        for folder in faces_folder:
+            folder_obj = Path(folder)
+            included_images = [
+                file
+                for file in folder_obj.iterdir()
+                if file.is_file() and file.suffix in VALID_EXTENSIONS
+            ]
+            if len(included_images) < min_faces:
+                print(
+                    f"[WARN]: {folder_obj.name} contains less than {min_faces} faces, skipping"
+                )
+                skipped.append(folder_obj.name)
+                continue
+
+            face_name = safe_name(folder_obj.name)
+            training_name = self.training_dir / face_name
+            validation_name = self.validation_dir / face_name
+            training_name.mkdir(parents=True, exist_ok=True)
+            validation_name.mkdir(parents=True, exist_ok=True)
+
+            person_train_count = 0
+            person_val_count = 0
+
+            for index, image_path in enumerate(included_images, start=1):
+                image = Path(image_path)
+                new_image_name = f"{face_name}_{str(index).zfill(3)}{image.suffix}"
+
+                if index <= validation_image_per:
+                    new_image_path = validation_name / new_image_name
+                    shutil.copy(image, new_image_path)
+                    person_val_count += 1
+                    val_count += 1
+                else:
+                    new_image_path = training_name / new_image_name
+                    shutil.copy(image, new_image_path)
+                    person_train_count += 1
+                    train_count += 1
+
+            per_person_counts[face_name] = {
+                "train": person_train_count,
+                "val": person_val_count,
+            }
+
+        print("\nImport Done.")
+        print(f"Training images saved:   {train_count}")
+        print(f"Validation images saved: {val_count}")
+        print(f"Training directory:      {self.training_dir}")
+        print(f"Validation directory:    {self.validation_dir}")
+        if skipped:
+            print(f"Skipped ({len(skipped)}):            {', '.join(skipped)}")
+        print("\nPer-person image counts:")
+        for name, counts in sorted(per_person_counts.items()):
+            print(f"  {name}: {counts['train']} training, {counts['val']} validation")
