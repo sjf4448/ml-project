@@ -14,3 +14,9 @@ data/face_recognition_output/*
 
 # Model artifacts
 *.pkl
+
+# Python venv
+.venv
+
+# Pycache folders
+**/__pycache__/
