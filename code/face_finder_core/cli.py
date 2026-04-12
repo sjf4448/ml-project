@@ -42,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--statistics",
         action="store_true",
-        help="Generate statistics about the validation"
+        help="Generate statistics about the validation (run after --validate to create the necessary data)",
     )
     return parser
 
