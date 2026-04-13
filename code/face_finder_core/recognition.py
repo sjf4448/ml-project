@@ -34,6 +34,7 @@ class DetectionResult:
     left: int
     confidence_distance: float | None
     crop_path: str | None
+    all_distances: dict[str, float] | None = None
 
 
 @dataclass
@@ -91,13 +92,12 @@ class FaceRecognizer:
         unknown_encoding: Any,
         loaded_encodings: dict[str, list[Any]],
         tolerance: float,
-    ) -> tuple[str | None, float | None]:
-        """Return the top voted name and best distance for one face embedding."""
+    ) -> tuple[str | None, float | None, dict[str, float] | None]:
         known_encodings = loaded_encodings["encodings"]
         known_names = loaded_encodings["names"]
 
         if not known_encodings:
-            return None, None
+            return None, None, None
 
         matches = face_recognition.compare_faces(
             known_encodings,
@@ -105,16 +105,24 @@ class FaceRecognizer:
             tolerance=tolerance,
         )
         face_distances = face_recognition.face_distance(
-            known_encodings, unknown_encoding
+            known_encodings,
+            unknown_encoding,
         )
 
         votes = Counter(name for match, name in zip(matches, known_names) if match)
         best_distance = float(face_distances.min()) if len(face_distances) else None
 
-        if votes:
-            return votes.most_common(1)[0][0], best_distance
+        # Build per-identity best distances
+        all_distances: dict[str, float] = {}
+        for name, distance in zip(known_names, face_distances):
+            distance = float(distance)
+            if name not in all_distances or distance < all_distances[name]:
+                all_distances[name] = distance
 
-        return None, best_distance
+        if votes:
+            return votes.most_common(1)[0][0], best_distance, all_distances
+
+        return None, best_distance, all_distances
 
     @staticmethod
     def _display_face(
@@ -180,7 +188,7 @@ class FaceRecognizer:
             zip(input_face_locations, input_face_encodings),
             start=1,
         ):
-            name, best_distance = self._recognize_face(
+            name, best_distance, all_distances = self._recognize_face(
                 unknown_encoding=unknown_encoding,
                 loaded_encodings=loaded_encodings,
                 tolerance=tolerance,
@@ -210,6 +218,7 @@ class FaceRecognizer:
                     left=bounding_box[3],
                     confidence_distance=best_distance,
                     crop_path=crop_path,
+                    all_distances=all_distances,
                 )
             )
             tqdm.write(f"{name}: box={bounding_box}, best_distance={best_distance}")
@@ -248,7 +257,7 @@ class FaceRecognizer:
 
         detections: list[LiveDetection] = []
         for bounding_box, unknown_encoding in zip(face_locations, face_encodings):
-            name, best_distance = self._recognize_face(
+            name, best_distance, _ = self._recognize_face(
                 unknown_encoding=unknown_encoding,
                 loaded_encodings=loaded_encodings,
                 tolerance=tolerance,
