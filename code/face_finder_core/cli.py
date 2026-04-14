@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
+from .classifiers import available_classifier_names
+from .config import CLASSIFIER_PATH
 from .recognition import FaceRecognizer
 from .training import FaceEncoder
 from .validation import ValidationRunner
@@ -13,6 +16,11 @@ def build_parser() -> argparse.ArgumentParser:
         description="Face detection and recognition pipeline for known-person classification"
     )
     parser.add_argument("--train", action="store_true", help="Encode labeled training faces")
+    parser.add_argument(
+        "--train-classifier",
+        action="store_true",
+        help="Train a classifier from saved embeddings for runtime recognition",
+    )
     parser.add_argument(
         "--validate",
         action="store_true",
@@ -35,6 +43,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Recognition tolerance. Lower is stricter. Typical values: 0.45 to 0.6",
     )
     parser.add_argument(
+        "--classifier",
+        default="linear_svc",
+        choices=available_classifier_names(),
+        help="Classifier to train/use (choose after running model_comparison.py)",
+    )
+    parser.add_argument(
+        "--classifier-path",
+        type=str,
+        default=str(CLASSIFIER_PATH),
+        help="Path to classifier artifact created by --train-classifier",
+    )
+    parser.add_argument(
+        "--disable-classifier",
+        action="store_true",
+        help="Disable classifier inference and use distance-only recognition",
+    )
+    parser.add_argument(
         "--show",
         action="store_true",
         help="Display the annotated image after processing",
@@ -53,11 +78,18 @@ def main() -> None:
     args = parser.parse_args()
 
     encoder = FaceEncoder()
-    recognizer = FaceRecognizer()
+    classifier_path = None if args.disable_classifier else Path(args.classifier_path)
+    recognizer = FaceRecognizer(classifier_path=classifier_path)
     validator = ValidationRunner(recognizer=recognizer)
 
     if args.train:
         encoder.encode_known_faces(model=args.model)
+
+    if args.train_classifier:
+        encoder.train_classifier(
+            classifier_name=args.classifier,
+            classifier_path=Path(args.classifier_path),
+        )
 
     if args.validate:
         validator.run(model=args.model, tolerance=args.tolerance)
@@ -76,6 +108,8 @@ def main() -> None:
     if args.statistics:
         generate_statistics()
 
-    if not any([args.train, args.validate, args.test, args.statistics]):
+    if not any(
+        [args.train, args.train_classifier, args.validate, args.test, args.statistics]
+    ):
         parser.print_help()
 

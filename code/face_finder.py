@@ -10,6 +10,7 @@ from pathlib import Path
 
 from face_finder_core import (
     ANNOTATED_DIR,
+    CLASSIFIER_PATH,
     CROPS_DIR,
     ENCODINGS_PATH,
     METADATA_DIR,
@@ -26,6 +27,7 @@ from face_finder_core.cli import build_parser, main
 
 __all__ = [
     "ANNOTATED_DIR",
+    "CLASSIFIER_PATH",
     "CROPS_DIR",
     "DetectionResult",
     "ENCODINGS_PATH",

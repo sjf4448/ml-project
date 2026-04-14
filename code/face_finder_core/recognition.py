@@ -8,12 +8,14 @@ from pathlib import Path
 from typing import Any
 
 import face_recognition
+import numpy as np
 from PIL import Image, ImageDraw
 from tqdm import tqdm
 
 from .config import (
     ANNOTATED_DIR,
     BOUNDING_BOX_COLOR,
+    CLASSIFIER_PATH,
     CROPS_DIR,
     ENCODINGS_PATH,
     METADATA_DIR,
@@ -53,10 +55,18 @@ class LiveDetection:
 class FaceRecognizer:
     """Runs face detection + identity matching for one input image."""
 
-    def __init__(self, encodings_location: Path = ENCODINGS_PATH):
+    def __init__(
+        self,
+        encodings_location: Path = ENCODINGS_PATH,
+        classifier_path: Path | None = CLASSIFIER_PATH,
+    ):
         self.encodings_location = encodings_location
+        self.classifier_path = classifier_path
         self._known_encodings_cache: dict[str, list[Any]] | None = None
+        self._classifier_bundle_cache: dict[str, Any] | None = None
         self._missing_encodings_warned = False
+        self._missing_classifier_warned = False
+        self._classifier_failure_warned = False
 
     def _load_known_encodings(self) -> dict[str, list[Any]]:
         if not self.encodings_location.exists():
@@ -87,8 +97,51 @@ class FaceRecognizer:
 
         return self._known_encodings_cache
 
+    def _load_classifier_bundle(self) -> dict[str, Any]:
+        if self.classifier_path is None:
+            raise FileNotFoundError("Classifier support is disabled")
+        if not self.classifier_path.exists():
+            raise FileNotFoundError(
+                f"Classifier file not found at {self.classifier_path}."
+            )
+        with self.classifier_path.open("rb") as handle:
+            return pickle.load(handle)
+
+    def _get_classifier_bundle(self, allow_missing: bool = True) -> dict[str, Any] | None:
+        if self.classifier_path is None:
+            return None
+        if self._classifier_bundle_cache is not None:
+            return self._classifier_bundle_cache
+
+        try:
+            self._classifier_bundle_cache = self._load_classifier_bundle()
+        except FileNotFoundError:
+            if not allow_missing:
+                raise
+            if not self._missing_classifier_warned:
+                print(
+                    f"[WARN] Classifier file not found at {self.classifier_path}. "
+                    "Falling back to distance-based matching."
+                )
+                self._missing_classifier_warned = True
+            return None
+
+        return self._classifier_bundle_cache
+
     @staticmethod
+    def _build_all_distances(
+        known_names: list[str],
+        face_distances: np.ndarray,
+    ) -> dict[str, float]:
+        all_distances: dict[str, float] = {}
+        for name, distance in zip(known_names, face_distances):
+            distance = float(distance)
+            if name not in all_distances or distance < all_distances[name]:
+                all_distances[name] = distance
+        return all_distances
+
     def _recognize_face(
+        self,
         unknown_encoding: Any,
         loaded_encodings: dict[str, list[Any]],
         tolerance: float,
@@ -99,25 +152,36 @@ class FaceRecognizer:
         if not known_encodings:
             return None, None, None
 
+        face_distances = face_recognition.face_distance(known_encodings, unknown_encoding)
+        all_distances = self._build_all_distances(known_names, face_distances)
+
+        classifier_bundle = self._get_classifier_bundle(allow_missing=True)
+        if classifier_bundle is not None:
+            try:
+                classifier = classifier_bundle["classifier"]
+                label_encoder = classifier_bundle["label_encoder"]
+                predicted_index = int(classifier.predict(np.asarray([unknown_encoding]))[0])
+                predicted_name = str(label_encoder.inverse_transform([predicted_index])[0])
+                predicted_distance = all_distances.get(predicted_name)
+                if predicted_distance is not None and predicted_distance <= tolerance:
+                    return predicted_name, predicted_distance, all_distances
+                return None, predicted_distance, all_distances
+            except Exception as exc:  # pragma: no cover - defensive fallback path.
+                if not self._classifier_failure_warned:
+                    print(
+                        f"[WARN] Classifier inference failed ({exc}). "
+                        "Falling back to distance-based matching."
+                    )
+                    self._classifier_failure_warned = True
+
         matches = face_recognition.compare_faces(
             known_encodings,
             unknown_encoding,
             tolerance=tolerance,
         )
-        face_distances = face_recognition.face_distance(
-            known_encodings,
-            unknown_encoding,
-        )
-
         votes = Counter(name for match, name in zip(matches, known_names) if match)
         best_distance = float(face_distances.min()) if len(face_distances) else None
 
-        # Build per-identity best distances
-        all_distances: dict[str, float] = {}
-        for name, distance in zip(known_names, face_distances):
-            distance = float(distance)
-            if name not in all_distances or distance < all_distances[name]:
-                all_distances[name] = distance
 
         if votes:
             return votes.most_common(1)[0][0], best_distance, all_distances

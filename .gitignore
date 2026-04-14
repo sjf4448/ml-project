@@ -21,3 +21,4 @@ data/face_recognition_output/*
 # Pycache folders
 **/__pycache__/
 **__pycache__**
+/.idea

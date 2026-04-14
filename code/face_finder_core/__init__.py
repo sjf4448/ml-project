@@ -11,6 +11,7 @@ The package is split by responsibility so students can inspect one stage at a ti
 
 from .config import (
     ANNOTATED_DIR,
+    CLASSIFIER_PATH,
     CROPS_DIR,
     ENCODINGS_PATH,
     METADATA_DIR,
@@ -25,6 +26,7 @@ from .validation import ValidationRunner
 
 __all__ = [
     "ANNOTATED_DIR",
+    "CLASSIFIER_PATH",
     "CROPS_DIR",
     "DetectionResult",
     "ENCODINGS_PATH",
