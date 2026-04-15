@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import (
     accuracy_score,
+    auc,
     classification_report,
     confusion_matrix,
     precision_recall_fscore_support,
     roc_curve,
-    auc,
 )
 from sklearn.preprocessing import label_binarize
 
@@ -69,7 +69,11 @@ def gather_data() -> list:
     metadata_path = "data/face_recognition_output/metadata/"
 
     if not os.path.exists(metadata_path):
-        raise FileNotFoundError("Metadata folder not found. Please run --validate first.")
+        raise FileNotFoundError(
+            "Metadata folder not found. Please run --validate first."
+        )
+    if len(os.listdir(metadata_path)) == 0:
+        raise RuntimeError("Metadata folder is empty.")
 
     json_data_list = []
 
@@ -321,7 +325,9 @@ def plot_accuracy(accuracy_report, output_path=None):
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     names = list(accuracy_report["per_person"].keys())
-    accuracies = [metrics["accuracy"] for metrics in accuracy_report["per_person"].values()]
+    accuracies = [
+        metrics["accuracy"] for metrics in accuracy_report["per_person"].values()
+    ]
 
     fig, ax = plt.subplots(figsize=(10, 6))
     bars = ax.bar(names, accuracies, edgecolor="black")
@@ -403,7 +409,9 @@ def plot_confidence_histogram(metadata_results=None, output_path=None):
         metadata_results = gather_data()
 
     if output_path is None:
-        output_path = Path("data") / "face_recognition_output" / "confidence_histogram.png"
+        output_path = (
+            Path("data") / "face_recognition_output" / "confidence_histogram.png"
+        )
     else:
         output_path = Path(output_path)
 
@@ -448,7 +456,11 @@ def plot_roc_curves(roc_report, output_path=None):
     fig, ax = plt.subplots(figsize=(10, 8))
 
     for class_name, values in roc_report["roc"].items():
-        ax.plot(values["fpr"], values["tpr"], label=f"{class_name} (AUC={values['auc']:.3f})")
+        ax.plot(
+            values["fpr"],
+            values["tpr"],
+            label=f"{class_name} (AUC={values['auc']:.3f})",
+        )
 
     ax.plot([0, 1], [0, 1], linestyle="--")
     ax.set_xlim([0.0, 1.0])
