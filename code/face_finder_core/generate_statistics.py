@@ -375,7 +375,8 @@ def plot_confusion_matrix(metrics_report, output_path=None):
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig_size = max(8, len(labels) * 0.5)
+    fig, ax = plt.subplots(figsize=(fig_size, fig_size))
     im = ax.imshow(cm, interpolation="nearest")
     fig.colorbar(im, ax=ax)
 
@@ -396,7 +397,7 @@ def plot_confusion_matrix(metrics_report, output_path=None):
                 str(cm[i, j]),
                 ha="center",
                 va="center",
-                color="white" if cm[i, j] > threshold else "black",
+                color="black" if cm[i, j] > threshold else "white",
             )
 
     plt.tight_layout()
