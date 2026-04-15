@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import dlib
 import face_recognition
 import numpy as np
 from sklearn.metrics import accuracy_score
@@ -72,17 +73,20 @@ class FaceEncoder:
 
         all_files = [f for f in self.training_dir.glob("*/*") if f.is_file()]
 
-        with ProcessPoolExecutor() as executor:
-            futures = {executor.submit(_encode_file, f, model): f for f in all_files}
-            for future in tqdm(
-                as_completed(futures),
+        use_cuda_cnn_path = model == "cnn" and bool(dlib.DLIB_USE_CUDA)
+
+        if use_cuda_cnn_path:
+            tqdm.write(
+                "[INFO] Using single-process encoding for model='cnn' with CUDA-enabled dlib."
+            )
+            for filepath in tqdm(
+                all_files,
                 total=len(all_files),
                 desc="Encoding faces",
                 unit="img",
             ):
-                filepath = futures[future]
                 processed_files += 1
-                person_label, face_encodings, skipped = future.result()
+                person_label, face_encodings, skipped = _encode_file(filepath, model)
                 if skipped:
                     skipped_files += 1
                     tqdm.write(f"[WARN] No faces found in training image: {filepath}")
@@ -90,6 +94,34 @@ class FaceEncoder:
                 for encoding in face_encodings:
                     names.append(person_label)
                     encodings.append(encoding)
+        else:
+            if model == "cnn" and not dlib.DLIB_USE_CUDA:
+                tqdm.write(
+                    "[WARN] model='cnn' selected but dlib CUDA is disabled; running CPU path."
+                )
+
+            with ProcessPoolExecutor() as executor:
+                futures = {
+                    executor.submit(_encode_file, f, model): f for f in all_files
+                }
+                for future in tqdm(
+                    as_completed(futures),
+                    total=len(all_files),
+                    desc="Encoding faces",
+                    unit="img",
+                ):
+                    filepath = futures[future]
+                    processed_files += 1
+                    person_label, face_encodings, skipped = future.result()
+                    if skipped:
+                        skipped_files += 1
+                        tqdm.write(
+                            f"[WARN] No faces found in training image: {filepath}"
+                        )
+                        continue
+                    for encoding in face_encodings:
+                        names.append(person_label)
+                        encodings.append(encoding)
 
         if not encodings:
             raise RuntimeError(

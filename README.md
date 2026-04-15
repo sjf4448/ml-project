@@ -19,12 +19,12 @@ You must have an discrete NVIDIA gpu, the [CUDA](https://developer.nvidia.com/cu
 
 A precompiled dlib wheel has been provided in the repository. To install said wheel, either
 ```bash
-uv sync
+uv pip install .\wheels\dlib-20.0.1-cp312-cp312-win_amd64.whl
 ```
 or 
 ```bash
 .\venv\Scripts\activate 
-pip install wheels\dlib-20.0.1-cp312-cp312-win_amd64.whl
+pip install .\wheels\dlib-20.0.1-cp312-cp312-win_amd64.whl
 ```
 
 Note that the provided sitecustomize.py is ONLY for windows users with default installation paths for CUDA/CuDNN, and it must be placed in the `site-packages` folder, otherwise dlib will not find the dll's properly.
