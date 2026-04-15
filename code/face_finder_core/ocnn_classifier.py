@@ -1,4 +1,9 @@
-"""Prototype Recognizer/Classifier - missing features"""
+"""Prototype Recognizer/Classifier - missing features
+- MTCNN/RetinaFace to crop image to face before running model
+- Add projection head for recognizer instead of raw
+- FAISS for larger models
+ISSUES: query + embedding db needs to be normalized vectors
+"""
 
 import torch
 
