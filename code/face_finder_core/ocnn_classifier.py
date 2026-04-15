@@ -7,6 +7,8 @@ ISSUES: query + embedding db needs to be normalized vectors
 
 import torch
 
+from .ocnn_model import build_model
+
 
 class FaceClassifier:
     def __init__(self, model_path, db_path, device="cuda"):
