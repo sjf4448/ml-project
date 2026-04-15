@@ -20,12 +20,19 @@ class ValidationRunner:
     def run(self, model: str = "hog", tolerance: float = 0.6) -> None:
         ensure_directories()
         VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
+        UNKNOWN_FACES_DIR = Path("data/unknown_faces")
 
         validation_files = [
             path
             for path in self.validation_dir.rglob("*")
             if path.is_file() and path.suffix.lower() in VALID_EXTENSIONS
         ]
+
+        validation_files.extend([
+            path
+            for path in UNKNOWN_FACES_DIR.rglob("*")
+            if path.is_file() and path.suffix.lower() in VALID_EXTENSIONS
+        ])
 
         if not validation_files:
             print(f"No validation images found in {self.validation_dir}")

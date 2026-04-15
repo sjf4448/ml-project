@@ -39,8 +39,9 @@ def train_tolerance_hyperparameter(validator:ValidationRunner, model):
                 break
             last = f1_score
     # Iterate more finely around the previous best value
-    print(f"\n\n\nBest tolerance so far: {tolerance.round(2)} with F1 score: {last}\nRefining Search...\n\n\n")
+    print(f"\n\n\nBest tolerance so far: {tolerance.round(2) - 0.1} with F1 score: {last}\nRefining Search...\n\n\n")
     best_tolerance = tolerance - 0.2 if tolerance > 0.2 else 0.0
+    last = -1
     for tolerance in np.arange(best_tolerance, best_tolerance + 0.3, 0.05):
         print(f"\n\n\nTesting tolerance: {tolerance.round(2)}\n\n\n")
         validator.run(model=model, tolerance=tolerance)
@@ -48,7 +49,9 @@ def train_tolerance_hyperparameter(validator:ValidationRunner, model):
         with open(path, "r") as f:
             validation_data = json.load(f)
             f1_score = validation_data["classification_metrics"]["macro_avg"].get("f1-score", 0.0)
-            if f1_score > last:
+            if last == -1:
+                last = f1_score
+            if f1_score >= last:
                 last = f1_score
                 best_tolerance = tolerance
             else:
