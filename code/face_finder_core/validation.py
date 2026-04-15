@@ -12,15 +12,15 @@ class ValidationRunner:
     """Batch runner that applies recognition to every validation image."""
 
     def __init__(
-        self, recognizer: FaceRecognizer, validation_dir: Path = VALIDATION_DIR
+        self, recognizer: FaceRecognizer, validation_dir: Path = VALIDATION_DIR, unknown_faces_dir: Path = Path("data/unknown_faces")
     ):
         self.recognizer = recognizer
         self.validation_dir = validation_dir
+        self.unknown_faces_dir = unknown_faces_dir
 
     def run(self, model: str = "hog", tolerance: float = 0.6) -> None:
         ensure_directories()
         VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
-        UNKNOWN_FACES_DIR = Path("data/unknown_faces")
 
         validation_files = [
             path
@@ -30,7 +30,7 @@ class ValidationRunner:
 
         validation_files.extend([
             path
-            for path in UNKNOWN_FACES_DIR.rglob("*")
+            for path in self.unknown_faces_dir.rglob("*")
             if path.is_file() and path.suffix.lower() in VALID_EXTENSIONS
         ])
 

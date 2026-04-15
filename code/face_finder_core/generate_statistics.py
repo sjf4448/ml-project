@@ -82,6 +82,8 @@ def gather_data() -> list:
 
                     record = data[0]
                     actual_name = Path(record["image_path"]).parent.name
+                    if actual_name == "unknown_faces":
+                        actual_name = "Unknown"
 
                     all_distances = record.get("all_distances")
                     if isinstance(all_distances, dict):
