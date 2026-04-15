@@ -184,6 +184,24 @@ def load_checkpoint(
     return ckpt["epoch"] + 1  # next epoch to run
 
 
+# ── Save Embeddings - Inprogress psuedocode ──────────────────────────────────────────────────────────
+def build_embedding_database(model, loader):
+    model.eval()
+    embeddings = []
+    labels = []
+
+    with torch.no_grad():
+        for images, lbls in loader
+            emb = model(images.to(device))
+            emb = F.normalize(emb, dim=1)
+            embeddings.append(emb.cpu())
+            labels.append(lbls)
+    embeds, label = torch.cat(embeddings), torch.cat(labels)
+    torch.save({
+        "embeddings": embeds,
+        "labels": label
+    }, "face_db.pt")
+
 # ── Main entry ────────────────────────────────────────────────────────────────
 def train(resume_from: Path | None = None):
     torch.manual_seed(SEED)
