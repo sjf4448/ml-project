@@ -14,6 +14,8 @@ dependencies = [
     "facenet-pytorch>=2.5.3",
     "faiss-cpu>=1.13.2",
     "joblib>=1.5.3",
+    "kagglehub>=1.0.0",
+    "matplotlib==3.10.8",
     "numpy>=2.4.3",
     "opencv-contrib-python>=4.13.0.92",
     "opencv-python>=4.13.0.92",
