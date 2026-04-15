@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from .hyperparameter_trainer import train_tolerance_hyperparameter
 
 from .classifiers import available_classifier_names
 from .config import CLASSIFIER_PATH
@@ -69,6 +70,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Generate statistics about the validation (run after --validate to create the necessary data)",
     )
+    parser.add_argument(
+        "--train-hyperparameter",
+        action="store_true",
+        help="Train the tolerance hyperparameter using the validation set",
+    )
     return parser
 
 
@@ -107,9 +113,12 @@ def main() -> None:
         
     if args.statistics:
         generate_statistics()
+    
+    if args.train_hyperparameter:
+        train_tolerance_hyperparameter(validator, model=args.model)
 
     if not any(
-        [args.train, args.train_classifier, args.validate, args.test, args.statistics]
+        [args.train, args.train_classifier, args.validate, args.test, args.statistics, args.train_hyperparameter]
     ):
         parser.print_help()
 

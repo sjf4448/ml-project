@@ -510,6 +510,20 @@ def generate_statistics():
     print(f"  Incorrect predictions: {confidence_metrics['incorrect_predictions']}")
     print()
 
+#save macro average and Confidence summary to a json file 
+    summary_output_path = Path("data") / "face_recognition_output" / "validation_summary.json"
+    summary_output_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_data = {
+        "accuracy_report": accuracy_report,
+        "classification_metrics": classification_metrics,
+        "confidence_metrics": confidence_metrics,
+        "roc_report": roc_report, 
+    }
+    with open(summary_output_path, "w", encoding="utf-8") as f:
+        json.dump(summary_data, f, indent=4)
+
+
+
     if roc_report["micro_auc"] is not None:
         print(f"Micro-average ROC AUC: {roc_report['micro_auc']:.4f}")
 
