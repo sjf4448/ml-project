@@ -1,4 +1,3 @@
-import os
 import random
 import shutil
 from pathlib import Path
@@ -41,7 +40,7 @@ def collect_identities(root: Path) -> dict[str, list[Path]]:
 all_identities = collect_identities(vgg_down_path)
 
 for split_name in ("train", "test"):
-    split_dir = vgg_root / split_name
+    split_dir = vgg_down_path / split_name
     if split_dir.exists():
         print(f"Scanning {split_dir}...")
         found = collect_identities(split_dir)
