@@ -185,6 +185,7 @@ def load_checkpoint(
 
 
 # ── Save Embeddings - Inprogress psuedocode ──────────────────────────────────────────────────────────
+# TODO: add db saver to ocnn_model.py
 def build_embedding_database(model, loader):
     model.eval()
     embeddings = []
