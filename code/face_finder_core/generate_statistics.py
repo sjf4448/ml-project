@@ -329,27 +329,30 @@ def plot_accuracy(accuracy_report, output_path=None):
         metrics["accuracy"] for metrics in accuracy_report["per_person"].values()
     ]
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    bars = ax.bar(names, accuracies, edgecolor="black")
-    ax.set_ylim(0, 100)
-    ax.set_ylabel("Accuracy (%)")
-    ax.set_xlabel("Person")
+    fig_height = max(8, len(names) * 0.4)
+    fig, ax = plt.subplots(figsize=(10, fig_height))
+    y_positions = np.arange(len(names)) * 1.3
+    bars = ax.barh(y_positions, accuracies, height=0.8, edgecolor="black")
+    ax.set_xlim(0, 100)
+    ax.set_xlabel("Accuracy (%)")
+    ax.set_ylabel("Person")
     ax.set_title("Per-person recognition accuracy")
-    ax.grid(axis="y", linestyle="--", alpha=0.4)
+    ax.set_yticks(y_positions)
+    ax.set_yticklabels(names)
+    ax.grid(axis="x", linestyle="--", alpha=0.4)
 
     for bar, value in zip(bars, accuracies):
-        height = bar.get_height()
+        width = bar.get_width()
         ax.annotate(
             f"{value:.1f}%",
-            xy=(bar.get_x() + bar.get_width() / 2, height),
-            xytext=(0, 6),
+            xy=(width, bar.get_y() + bar.get_height() / 2),
+            xytext=(6, 0),
             textcoords="offset points",
-            ha="center",
-            va="bottom",
+            ha="left",
+            va="center",
             fontsize=9,
         )
 
-    plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
     fig.savefig(output_path, dpi=150)
     plt.close(fig)
