@@ -14,6 +14,32 @@ The code is organized so you can:
 
 ## Quickstart
 
+### IMPORTANT: THIS BRANCH REQUIRES CUDA - THE PROVIDED DLIB WHEEL WILL NOT IMPORT IF YOU DO NOT HAVE CUDA SUPPORT
+You must have an discrete NVIDIA gpu, the [CUDA](https://developer.nvidia.com/cuda/toolkit) toolchain, as well as [CuDNN](https://developer.nvidia.com/cudnn) installed on your local system.
+
+A precompiled dlib wheel has been provided in the repository. To install said wheel, either
+```bash
+uv sync
+```
+or 
+```bash
+.\venv\Scripts\activate 
+pip install wheels\dlib-20.0.1-cp312-cp312-win_amd64.whl
+```
+
+Note that the provided sitecustomize.py is ONLY for windows users with default installation paths for CUDA/CuDNN, and it must be placed in the `site-packages` folder, otherwise dlib will not find the dll's properly.
+The required DLL's are: `cudnn64_9.dll` and `cublas64_13.dll`.
+
+If you do not want to use the provided wheel, follow these steps to compile a wheel with CUDA support:
+```bash
+git clone https://github.com/davisking/dlib.git
+pip install packaging
+pip install setuptools
+python setup.py bdist_wheel
+```
+
+### Actual Project
+
 From the project root, run:
 
 ```bash
