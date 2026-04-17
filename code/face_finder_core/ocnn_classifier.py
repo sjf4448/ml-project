@@ -12,10 +12,16 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 
-from .config import EMBEDDING_DIM, IMAGE_SIZE, MTCNN_MARGIN, MTCNN_MIN_FACE, OUTPUT_DIR
-from .dataset import get_val_transforms
-from .embedding_db import load_embedding_database
-from .model import build_model
+from .ocnn_config import (
+    EMBEDDING_DIM,
+    IMAGE_SIZE,
+    MTCNN_MARGIN,
+    MTCNN_MIN_FACE,
+    OUTPUT_DIR,
+)
+from .ocnn_dataset import get_val_transforms
+from .ocnn_embedding_db import load_embedding_database
+from .ocnn_model import build_model
 
 logger = logging.getLogger(__name__)
 
