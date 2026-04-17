@@ -12,7 +12,7 @@ MIN_IMAGES = 10
 MAX_IDENTITIES = 500
 SEED = 42
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TRAIN_DIR = PROJECT_ROOT / "data" / "face_recognition_training"
 VAL_DIR = PROJECT_ROOT / "data" / "face_recognition_validation"
 TEST_DIR = PROJECT_ROOT / "data" / "face_recognition_test"

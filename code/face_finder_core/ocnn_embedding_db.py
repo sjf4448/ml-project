@@ -41,6 +41,35 @@ def aggregate_embeddings(
     return torch.stack(agg_embeddings), torch.stack(agg_labels)
 
 
+# ── Save embeddings as pkl files ──────────────────────────────────────────────
+def save_encodings_pkl(
+    embeddings: torch.Tensor,
+    labels: torch.Tensor,
+    label_encoder,
+    path: Path | None = None,
+):
+    """
+    Saves embeddings in the encodings.pkl format expected by the existing
+    face_finder.py pipeline — compatible with classifiers.py and distance matching.
+    """
+    path = path or (OUTPUT_DIR / "encodings.pkl")
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Convert to numpy — sklearn classifiers expect numpy arrays, not tensors
+    emb_np = embeddings.cpu().numpy()  # (N, 512)
+    labels_np = label_encoder.inverse_transform(labels.cpu().numpy())  # string names
+
+    payload = {
+        "encodings": emb_np,
+        "names": labels_np.tolist(),
+    }
+
+    with open(path, "wb") as f:
+        pickle.dump(payload, f)
+
+    logger.info(f"encodings.pkl saved → {path} ({len(labels_np)} entries)")
+
+
 # ── Build ─────────────────────────────────────────────────────────────────────
 
 
@@ -120,11 +149,16 @@ def load_embedding_database(
 def build_and_save_database(
     model, loader, device: str, label_encoder, aggregate: bool = True
 ):
-    """
-    Single call to run after training — builds, aggregates, and saves.
-    Call this from training.py after the training loop finishes.
-    """
     logger.info("Building embedding database...")
-    embeddings, labels = build_embedding_database(model, loader, device, aggregate)
-    save_embedding_database(embeddings, labels, label_encoder)
+    embeddings, labels = build_embedding_database(
+        model, loader, device, aggregate=False
+    )  # no aggregation for pkl — one row per image
+
+    save_encodings_pkl(embeddings, labels, label_encoder)  # existing pipeline
+
+    if aggregate:
+        embeddings, labels = aggregate_embeddings(embeddings, labels)
+
+    save_embedding_database(embeddings, labels, label_encoder)  # faiss/torch pipeline
+
     return embeddings, labels

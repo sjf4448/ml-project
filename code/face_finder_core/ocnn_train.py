@@ -29,6 +29,9 @@ from .ocnn_config import (
     OUTPUT_DIR,
     SAVE_EVERY,
     SEED,
+    TEST_DIR,
+    TRAIN_DIR,
+    VAL_DIR,
     WARMUP_EPOCHS,
     WEIGHT_DECAY,
 )
@@ -38,10 +41,6 @@ from .ocnn_model import build_model
 logger = logging.getLogger(__name__)
 
 # Validate directory structure
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-TRAIN_DIR = PROJECT_ROOT / "data" / "face_recognition_training"
-VAL_DIR = PROJECT_ROOT / "data" / "face_recognition_validation"
-TEST_DIR = PROJECT_ROOT / "data" / "face_recognition_test"
 MIN_IDENTITIES = 10
 train_path = Path(TRAIN_DIR)
 val_path = Path(VAL_DIR)
@@ -192,16 +191,14 @@ def build_embedding_database(model, loader):
     labels = []
 
     with torch.no_grad():
-        for images, lbls in loader
+        for images, lbls in loader:
             emb = model(images.to(device))
             emb = F.normalize(emb, dim=1)
             embeddings.append(emb.cpu())
             labels.append(lbls)
     embeds, label = torch.cat(embeddings), torch.cat(labels)
-    torch.save({
-        "embeddings": embeds,
-        "labels": label
-    }, "face_db.pt")
+    torch.save({"embeddings": embeds, "labels": label}, "face_db.pt")
+
 
 # ── Main entry ────────────────────────────────────────────────────────────────
 def train(resume_from: Path | None = None):
