@@ -90,6 +90,89 @@ uv sync
 
 ## Pipeline (Step by Step)
 
+### OCNN w/ ArcFace Pipeline - Step 1: `ocnn.py`
+
+As an alternative to the `face_recognition`/dlib embedding stack, the project includes a CNN training pipeline (`code/ocnn.py`) that fine-tunes a ResNet-18 on VGGFace2 using ArcFace metric learning. This produces a 512-d embedding model you own end-to-end.
+
+Run the steps in order:
+
+```bash
+python code/ocnn.py prepare
+python code/ocnn.py train
+python code/ocnn.py build-db
+python code/ocnn.py evaluate
+```
+
+#### `python code/ocnn.py prepare`
+
+Downloads VGGFace2 via kagglehub and splits it into the training, validation, and test folders.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---:|---|
+| `--max-identities` | int | `MAX_IDENTITIES` in config | Limit number of identities to copy (useful for trial runs) |
+| `--min-images` | int | `10` | Skip identities with fewer images than this |
+| `--no-clear` | flag | off | Skip clearing destination folders before copying |
+
+#### `python code/ocnn.py train`
+
+Pre-aligns all images with MTCNN, then fine-tunes ResNet-18 with ArcFace loss. Saves checkpoints to `checkpoints/` and the best model to `checkpoints/best_model.pt`.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---:|---|
+| `--resume` | path | none | Path to a checkpoint `.pt` file to resume from |
+| `--epochs` | int | `NUM_EPOCHS` in config | Override number of training epochs |
+| `--batch-size` | int | `BATCH_SIZE` in config | Override batch size |
+
+#### `python code/ocnn.py build-db`
+
+Runs all training images through the trained model and saves the embedding database to `data/face_recognition_output/face_db.pt`. Also writes `encodings.pkl` in the format expected by the existing classifier pipeline and encodes known faces into the embeddings_db.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---:|---|
+| `--model-path` | path | `checkpoints/best_model.pt` | Path to trained model weights |
+| `--no-aggregate` | flag | off | Store one embedding per image instead of one per identity |
+
+#### `python code/ocnn.py evaluate`
+
+Runs recognition over the validation folder and prints accuracy, unknown rate, and wrong prediction rate.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---:|---|
+| `--model-path` | path | `checkpoints/best_model.pt` | Path to trained model weights |
+| `--threshold` | float | `0.4` | Cosine similarity threshold — below this is reported as Unknown |
+
+#### `python code/ocnn.py test`
+
+Tests a single image against the embedding database. The person does not need to have been in the original training set — they only need their embeddings present in `face_db.pt` (added via `build-db`). Saves a cropped face, an annotated image with a bounding box, and a metadata JSON to the output folder.
+
+```bash
+python code/ocnn.py test --file data/face_recognition_test/friend1.jpg
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---:|---|
+| `--file, -f` | path | required | Path to the image to test |
+| `--model-path` | path | `checkpoints/best_model.pt` | Path to trained model weights |
+| `--threshold` | float | `0.4` | Cosine similarity threshold — below this is reported as Unknown |
+| `--show` | flag | off | Display the image after recognition |
+| `--no-annotate` | flag | off | Skip saving the annotated output image |
+
+**Testing someone not in the training set:**
+
+```bash
+# 1. Add their photos to known_faces/<name>/
+# 2. Rebuild the embedding database to include them
+python code/ocnn.py build-db
+
+# 3. Test a new image of them
+python code/ocnn.py test --file data/face_recognition_test/friend1.jpg --show
+```
+
+Output files written to `data/face_recognition_output/`:
+- `crops/<name>_crop.jpg` — the aligned face crop passed to the model
+- `annotated/<name>_annotated.jpg` — original image with bounding box and identity label
+- `metadata/<name>.json` — identity, confidence, threshold, and decision
+
 ### Step 1: Build / refresh dataset folders
 
 Run:
@@ -290,6 +373,23 @@ If classifier usage is disabled or classifier artifact is unavailable:
 - Recognition quality depends heavily on image quality, lighting, and identity coverage.
 - Lower `--tolerance` is stricter: fewer false positives, more `Unknown`.
 - For reproducible classifier experiments, run `model_comparison.py` before `--train-classifier`.
+
+## OCNN Explanation
+We fine-tune a preexisting image model - in our case ResNet18 with the ArcFace loss function. IMPORTANT: what we train is a essentially a mathetical function that outputs the label
+of the closest embedding to the embedding that we provide as our test image.
+
+### What is ArcFace?
+ArcFace is a loss function specifically designed for face recognition - this fixes the typical problem with SoftMax face recognition by attempting to cluster similar 
+embeddings of the same person together and other's further away. In general, it penalizes embedding with a penalty factor `m`. It also has two hyperparameters: `s` for scale, and `m`, 
+the penalty.
+
+To be more specific, ArcFace uses a hypersphere on which normalized 512-d vectors sit on. Each class gets a L2-normalized row in the weight vector of `W` with shape `(num_classes, 512)`. 
+Each row represents the "center" vector of each class - the closer a vector is to that center vector(via cosine similarity), the more similar it is. During the forward pass of the training, 
+an embedding `x` will have it's logit calculated via $logit_i = s * cos(\theta_i)$. $\theta_i$ represent's the angle(distance) between `x` and the i-th class center. `s` is the scale factor, 
+used to push it into proper softmax/backpropogation range.
+
+For the correct class $\theta_y$, a margin `m` is added. This reduces the logit range, forcing the model to push the correct embeddings closer together to reduce loss. Mathematically this works
+since $cos(\theta + m) < cos(\theta)$
 
 ## Resource Links
 

@@ -5,3 +5,5 @@
 2. Real Python face recognition tutorial
    - https://realpython.com/face-recognition-with-python/#step-3-recognize-unlabeled-faces
    - Served as the baseline reference for the recognition flow in `code/face_finder.py`.
+3. ArcFace Paper
+   - https://arxiv.org/abs/1801.07698
