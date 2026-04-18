@@ -343,6 +343,22 @@ If classifier usage is disabled or classifier artifact is unavailable:
 - Lower `--tolerance` is stricter: fewer false positives, more `Unknown`.
 - For reproducible classifier experiments, run `model_comparison.py` before `--train-classifier`.
 
+## OCNN Explanation
+We fine-tune a preexisting image model - in our case ResNet18 with the ArcFace loss function. 
+
+### What is ArcFace?
+ArcFace is a loss function specifically designed for face recognition - this fixes the typical problem with SoftMax face recognition by attempting to cluster similar 
+embeddings of the same person together and other's further away. In general, it penalizes embedding with a penalty factor `m`. It also has two hyperparameters: `s` for scale, and `m`, 
+the penalty.
+
+To be more specific, ArcFace uses a hypersphere on which normalized 512-d vectors sit on. Each class gets a L2-normalized row in the weight vector of `W` with shape `(num_classes, 512)`. 
+Each row represents the "center" vector of each class - the closer a vector is to that center vector(via cosine similarity), the more similar it is. During the forward pass of the training, 
+an embedding `x` will have it's logit calculated via $logit_i = s * cos(\theta_i)$. $\theta_i$ represent's the angle(distance) between `x` and the i-th class center. `s` is the scale factor, 
+used to push it into proper softmax/backpropogation range.
+
+For the correct class $\theta_y$, a margin `m` is added. This reduces the logit range, forcing the model to push the correct embeddings closer together to reduce loss. Mathematically this works
+since $cos(\theta + m) < cos(\theta)$
+
 ## Resource Links
 
 See `resources/resources.txt` for source references used in the project.
