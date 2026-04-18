@@ -90,7 +90,7 @@ uv sync
 
 ## Pipeline (Step by Step)
 
-### Step 1b: (Optional) Train a custom CNN with ArcFace — `ocnn.py`
+### OCNN w/ ArcFace Pipeline - Step 1: `ocnn.py`
 
 As an alternative to the `face_recognition`/dlib embedding stack, the project includes a CNN training pipeline (`code/ocnn.py`) that fine-tunes a ResNet-18 on VGGFace2 using ArcFace metric learning. This produces a 512-d embedding model you own end-to-end.
 
@@ -140,7 +140,7 @@ Runs recognition over the validation folder and prints accuracy, unknown rate, a
 |---|---|---:|---|
 | `--model-path` | path | `checkpoints/best_model.pt` | Path to trained model weights |
 | `--threshold` | float | `0.4` | Cosine similarity threshold — below this is reported as Unknown |
-```
+
 
 ### Step 1: Build / refresh dataset folders
 
