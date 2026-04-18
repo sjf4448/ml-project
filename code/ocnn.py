@@ -127,8 +127,32 @@ def main() -> None:
         )
 
     elif args.command == "build-db":
+        import torch
+        from face_finder_core.ocnn_config import BATCH_SIZE, CHECKPOINT_DIR, NUM_WORKERS
+        from face_finder_core.ocnn_dataset import build_dataloaders
+        from face_finder_core.ocnn_model import build_model
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model_path = (
+            Path(args.model_path)
+            if args.model_path
+            else CHECKPOINT_DIR / "best_model.pt"
+        )
+
+        model = build_model(device)
+        model.load_state_dict(torch.load(model_path, map_location=device))
+
+        train_loader, _, _, label_encoder = build_dataloaders(
+            batch_size=BATCH_SIZE,
+            num_workers=NUM_WORKERS,
+            device=device,
+        )
+
         ocnn_embedding_db.build_and_save_database(
-            model_path=Path(args.model_path) if args.model_path else None,
+            model=model,
+            loader=train_loader,
+            device=device,
+            label_encoder=label_encoder,
             aggregate=not args.no_aggregate,
         )
 
