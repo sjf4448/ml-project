@@ -198,7 +198,7 @@ def evaluate(
 
     model_path = model_path or (CHECKPOINT_DIR / "best_model.pt")
 
-    recognizer = FaceRecognizer(model_path=model_path, threshold=threshold)
+    recognizer = FaceRecognizer(model_path=model_path)
 
     total = 0
     correct = 0
