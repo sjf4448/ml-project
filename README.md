@@ -90,6 +90,58 @@ uv sync
 
 ## Pipeline (Step by Step)
 
+### Step 1b: (Optional) Train a custom CNN with ArcFace — `ocnn.py`
+
+As an alternative to the `face_recognition`/dlib embedding stack, the project includes a CNN training pipeline (`code/ocnn.py`) that fine-tunes a ResNet-18 on VGGFace2 using ArcFace metric learning. This produces a 512-d embedding model you own end-to-end.
+
+Run the steps in order:
+
+```bash
+python code/ocnn.py prepare
+python code/ocnn.py train
+python code/ocnn.py build-db
+python code/ocnn.py evaluate
+```
+
+#### `python code/ocnn.py prepare`
+
+Downloads VGGFace2 via kagglehub and splits it into the training, validation, and test folders.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---:|---|
+| `--max-identities` | int | `MAX_IDENTITIES` in config | Limit number of identities to copy (useful for trial runs) |
+| `--min-images` | int | `10` | Skip identities with fewer images than this |
+| `--no-clear` | flag | off | Skip clearing destination folders before copying |
+
+#### `python code/ocnn.py train`
+
+Pre-aligns all images with MTCNN, then fine-tunes ResNet-18 with ArcFace loss. Saves checkpoints to `checkpoints/` and the best model to `checkpoints/best_model.pt`.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---:|---|
+| `--resume` | path | none | Path to a checkpoint `.pt` file to resume from |
+| `--epochs` | int | `NUM_EPOCHS` in config | Override number of training epochs |
+| `--batch-size` | int | `BATCH_SIZE` in config | Override batch size |
+
+#### `python code/ocnn.py build-db`
+
+Runs all training images through the trained model and saves the embedding database to `data/face_recognition_output/face_db.pt`. Also writes `encodings.pkl` in the format expected by the existing classifier pipeline.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---:|---|
+| `--model-path` | path | `checkpoints/best_model.pt` | Path to trained model weights |
+| `--no-aggregate` | flag | off | Store one embedding per image instead of one per identity |
+
+#### `python code/ocnn.py evaluate`
+
+Runs recognition over the validation folder and prints accuracy, unknown rate, and wrong prediction rate.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---:|---|
+| `--model-path` | path | `checkpoints/best_model.pt` | Path to trained model weights |
+| `--threshold` | float | `0.4` | Cosine similarity threshold — below this is reported as Unknown |
+```
+
 ### Step 1: Build / refresh dataset folders
 
 Run:
