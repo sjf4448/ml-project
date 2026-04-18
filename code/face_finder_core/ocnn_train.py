@@ -201,7 +201,14 @@ def build_embedding_database(model, loader):
 
 
 # ── Main entry ────────────────────────────────────────────────────────────────
-def train(resume_from: Path | None = None):
+def train(
+    resume_from: Path | None = None,
+    num_epochs: int | None = None,
+    batch_size: int | None = None,
+):
+    _num_epochs = num_epochs if num_epochs is not None else NUM_EPOCHS
+    _batch_size = batch_size if batch_size is not None else BATCH_SIZE
+
     torch.manual_seed(SEED)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -209,7 +216,7 @@ def train(resume_from: Path | None = None):
 
     # ── Data ──────────────────────────────────────────────────────────────
     train_loader, val_loader, num_classes, label_encoder = build_dataloaders(
-        batch_size=BATCH_SIZE,
+        batch_size=_batch_size,
         num_workers=NUM_WORKERS,
         device=device,
     )
@@ -259,7 +266,7 @@ def train(resume_from: Path | None = None):
     # ── Loop ──────────────────────────────────────────────────────────────
     best_val_loss = float("inf")
 
-    for epoch in range(start_epoch, NUM_EPOCHS):
+    for epoch in range(start_epoch, _num_epochs):
         train_loss = train_one_epoch(
             model, train_loader, loss_fn, optimizer, device, epoch, writer
         )
@@ -267,7 +274,7 @@ def train(resume_from: Path | None = None):
         scheduler.step()
 
         logger.info(
-            f"Epoch {epoch + 1}/{NUM_EPOCHS} — "
+            f"Epoch {epoch + 1}/{_num_epochs} — "
             f"train loss: {train_loss:.4f}  val loss: {val_loss:.4f}  "
             f"lr: {scheduler.get_last_lr()[0]:.6f}"
         )
