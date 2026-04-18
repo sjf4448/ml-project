@@ -13,6 +13,7 @@ from torch.optim.lr_scheduler import LambdaLR, SequentialLR, StepLR
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
+from . import ocnn_mtcnn_align
 from .ocnn_config import (
     ARCFACE_MARGIN,
     ARCFACE_SCALE,
@@ -208,6 +209,9 @@ def train(
 ):
     _num_epochs = num_epochs if num_epochs is not None else NUM_EPOCHS
     _batch_size = batch_size if batch_size is not None else BATCH_SIZE
+
+    # Trigger mtcnn
+    ocnn_mtcnn_align.run()
 
     torch.manual_seed(SEED)
 

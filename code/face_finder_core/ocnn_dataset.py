@@ -5,11 +5,9 @@ import pickle
 from pathlib import Path
 
 import albumentations as A
-import cv2
 import numpy as np
 import torch
 from albumentations.pytorch import ToTensorV2
-from facenet_pytorch import MTCNN
 from PIL import Image
 from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import Dataset
@@ -17,30 +15,12 @@ from torch.utils.data import Dataset
 from .ocnn_config import (
     AUGMENT_PROB,
     COLOR_JITTER,
-    ENCODINGS_PATH,
     IMAGE_SIZE,
-    MTCNN_MARGIN,
-    MTCNN_MIN_FACE,
     TRAIN_DIR,
     VAL_DIR,
 )
 
 logger = logging.getLogger(__name__)
-
-# ── MTCNN singleton ───────────────────────────────────────────────────────────
-# One shared instance — initializing it per-sample is very slow
-
-
-def get_mtcnn(device: str = "cpu") -> MTCNN:
-    return MTCNN(
-        image_size=IMAGE_SIZE,
-        margin=MTCNN_MARGIN,
-        min_face_size=MTCNN_MIN_FACE,
-        keep_all=False,  # only the most prominent face per image
-        post_process=False,  # return raw pixels, not whitened
-        device=device,
-    )
-
 
 # ── Transforms ────────────────────────────────────────────────────────────────
 
@@ -93,12 +73,10 @@ class VGGFace2Dataset(Dataset):
         self,
         root: Path,
         transform: A.Compose,
-        mtcnn: MTCNN,
         label_encoder: LabelEncoder | None = None,
     ):
         self.root = Path(root)
         self.transform = transform
-        self.mtcnn = mtcnn
 
         self.samples: list[tuple[Path, int]] = []
 
@@ -137,25 +115,11 @@ class VGGFace2Dataset(Dataset):
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, int] | None:
         img_path, label = self.samples[idx]
 
-        # ── Load image ─────────────────────────────────────────────────────
         pil_img = Image.open(img_path).convert("RGB")
+        img_np = np.array(pil_img)
 
-        # ── MTCNN alignment ────────────────────────────────────────────────
-        # Returns a (C, H, W) float tensor if a face is found, else None
-        face_tensor = self.mtcnn(pil_img)
-
-        if face_tensor is None:
-            # No face detected — return a black tensor as a safe fallback.
-            # The collate_fn below filters these out before they hit the model.
-            return None
-
-        # face_tensor is float32 in [0, 255] from MTCNN (post_process=False)
-        # Convert to uint8 numpy for albumentations
-        face_np = face_tensor.permute(1, 2, 0).numpy().astype(np.uint8)
-
-        # ── Augmentation + normalization ───────────────────────────────────
-        augmented = self.transform(image=face_np)
-        tensor = augmented["image"]  # (C, H, W), normalized
+        augmented = self.transform(image=img_np)
+        tensor = augmented["image"]
 
         return tensor, label
 
