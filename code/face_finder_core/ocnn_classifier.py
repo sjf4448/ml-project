@@ -2,6 +2,7 @@
 recognition.py — loads the trained model + embedding DB and recognizes faces.
 """
 
+import json
 import logging
 import pickle
 from pathlib import Path
@@ -242,3 +243,85 @@ def evaluate(
         "wrong": wrong,
         "accuracy": accuracy,
     }
+
+
+def test_image(
+    image_path: Path,
+    model_path: Path | None = None,
+    db_path: Path | None = None,
+    label_encoder_path: Path | None = None,
+    threshold: float = 0.4,
+    show: bool = False,
+    save_annotated: bool = True,
+):
+    """
+    Tests a single image against the embedding_db - only requires previous embeddings of that person into the db
+    """
+    import cv2
+
+    from .ocnn_config import ANNOTATED_DIR, CROPS_DIR, METADATA_DIR
+
+    model_path = model_path or (CHECKPOINT_DIR / "best_model.pt")
+    image_path = Path(image_path)
+
+    recognizer = FaceRecognizer(
+        model_path=model_path, db_path=db_path, label_encoder_path=label_encoder_path
+    )
+
+    pil_img = Image.open(image_path).convert("RGB")
+    name, confidence = recognizer.recognize(pil_img, threshold=threshold)
+
+    # ── Save crop ──────────────────────────────────────────────────────────
+    face_tensor = recognizer._align_face(pil_img)
+    if face_tensor is not None:
+        CROPS_DIR.mkdir(parents=True, exist_ok=True)
+        crop_np = face_tensor.squeeze(0).permute(1, 2, 0).numpy()
+        crop_pil = Image.fromarray(crop_np.astype("uint8"))
+        crop_path = CROPS_DIR / f"{image_path.stem}_crop.jpg"
+        crop_pil.save(crop_path)
+        logger.info(f"Crop saved → {crop_path}")
+
+    # ── Save annotated image ───────────────────────────────────────────────
+    if save_annotated:
+        ANNOTATED_DIR.mkdir(parents=True, exist_ok=True)
+        img_cv = cv2.imread(str(image_path))
+        label = f"{name} ({confidence:.2f})"
+        color = (0, 255, 0) if name != "unknown" else (0, 0, 255)
+
+        # detect box for annotation
+        boxes, _ = recognizer.mtcnn.detect(pil_img)  # type: ignore
+        if boxes is not None:
+            x1, y1, x2, y2 = [int(b) for b in boxes[0]]
+            cv2.rectangle(img_cv, (x1, y1), (x2, y2), color, 2)  # type: ignore
+            cv2.putText(
+                img_cv,  # type: ignore
+                label,
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                color,
+                2,
+            )  # type: ignore
+
+        annotated_path = ANNOTATED_DIR / f"{image_path.stem}_annotated.jpg"
+        cv2.imwrite(str(annotated_path), img_cv)  # type: ignore
+        print(f"  Annotated  : {annotated_path}")
+
+    # ── Save metadata ──────────────────────────────────────────────────────
+    METADATA_DIR.mkdir(parents=True, exist_ok=True)
+    metadata = {
+        "file": image_path.name,
+        "identity": name,
+        "confidence": round(confidence, 6),
+        "threshold": threshold,
+        "decision": "known" if name != "unknown" else "unknown",
+    }
+    meta_path = METADATA_DIR / f"{image_path.stem}.json"
+    with open(meta_path, "w") as f:
+        json.dump(metadata, f, indent=2)
+    print(f"  Metadata   : {meta_path}")
+
+    if show:
+        pil_img.show()
+
+    return name, confidence

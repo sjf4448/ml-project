@@ -104,6 +104,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="Cosine similarity threshold for recognition (default: 0.4)",
     )
 
+    # ── test ──────────────────────────────────────────────────────────────────────
+    test = subparsers.add_parser(
+        "test", help="Test a single image against the embedding database"
+    )
+    test.add_argument(
+        "--file",
+        "-f",
+        type=str,
+        required=True,
+        help="Path to the image to test",
+    )
+    test.add_argument(
+        "--model-path",
+        type=str,
+        default=None,
+        help="Path to model weights (default: checkpoints/best_model.pt)",
+    )
+    test.add_argument(
+        "--threshold",
+        type=float,
+        default=0.4,
+        help="Cosine similarity threshold (default: 0.4)",
+    )
+    test.add_argument(
+        "--show",
+        action="store_true",
+        help="Display the image after recognition",
+    )
+    test.add_argument(
+        "--no-annotate",
+        action="store_true",
+        help="Skip saving annotated output image",
+    )
+
     return parser
 
 
@@ -160,6 +194,15 @@ def main() -> None:
         ocnn_classifier.evaluate(
             model_path=Path(args.model_path) if args.model_path else None,
             threshold=args.threshold,
+        )
+
+    elif args.command == "test":
+        ocnn_classifier.test_image(
+            image_path=Path(args.file),
+            model_path=Path(args.model_path) if args.model_path else None,
+            threshold=args.threshold,
+            show=args.show,
+            save_annotated=not args.no_annotate,
         )
 
 

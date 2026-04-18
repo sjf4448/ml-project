@@ -141,6 +141,37 @@ Runs recognition over the validation folder and prints accuracy, unknown rate, a
 | `--model-path` | path | `checkpoints/best_model.pt` | Path to trained model weights |
 | `--threshold` | float | `0.4` | Cosine similarity threshold — below this is reported as Unknown |
 
+#### `python code/ocnn.py test`
+
+Tests a single image against the embedding database. The person does not need to have been in the original training set — they only need their embeddings present in `face_db.pt` (added via `build-db`). Saves a cropped face, an annotated image with a bounding box, and a metadata JSON to the output folder.
+
+```bash
+python code/ocnn.py test --file data/face_recognition_test/friend1.jpg
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---:|---|
+| `--file, -f` | path | required | Path to the image to test |
+| `--model-path` | path | `checkpoints/best_model.pt` | Path to trained model weights |
+| `--threshold` | float | `0.4` | Cosine similarity threshold — below this is reported as Unknown |
+| `--show` | flag | off | Display the image after recognition |
+| `--no-annotate` | flag | off | Skip saving the annotated output image |
+
+**Testing someone not in the training set:**
+
+```bash
+# 1. Add their photos to known_faces/<name>/
+# 2. Rebuild the embedding database to include them
+python code/ocnn.py build-db
+
+# 3. Test a new image of them
+python code/ocnn.py test --file data/face_recognition_test/friend1.jpg --show
+```
+
+Output files written to `data/face_recognition_output/`:
+- `crops/<name>_crop.jpg` — the aligned face crop passed to the model
+- `annotated/<name>_annotated.jpg` — original image with bounding box and identity label
+- `metadata/<name>.json` — identity, confidence, threshold, and decision
 
 ### Step 1: Build / refresh dataset folders
 
