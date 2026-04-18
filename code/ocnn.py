@@ -7,11 +7,11 @@ Note: will be integrated into recogniton pipeline at the end with the pkl file.
 from __future__ import annotations
 
 import argparse
-from code.face_finder_core import ocnn_embedding_db
 from pathlib import Path
 
 from face_finder_core import (
     ocnn_classifier,
+    ocnn_embedding_db,
     ocnn_prepare,
     ocnn_train,
 )
