@@ -125,7 +125,7 @@ Pre-aligns all images with MTCNN, then fine-tunes ResNet-18 with ArcFace loss. S
 
 #### `python code/ocnn.py build-db`
 
-Runs all training images through the trained model and saves the embedding database to `data/face_recognition_output/face_db.pt`. Also writes `encodings.pkl` in the format expected by the existing classifier pipeline.
+Runs all training images through the trained model and saves the embedding database to `data/face_recognition_output/face_db.pt`. Also writes `encodings.pkl` in the format expected by the existing classifier pipeline and encodes known faces into the embeddings_db.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---:|---|
@@ -375,7 +375,8 @@ If classifier usage is disabled or classifier artifact is unavailable:
 - For reproducible classifier experiments, run `model_comparison.py` before `--train-classifier`.
 
 ## OCNN Explanation
-We fine-tune a preexisting image model - in our case ResNet18 with the ArcFace loss function. 
+We fine-tune a preexisting image model - in our case ResNet18 with the ArcFace loss function. IMPORTANT: what we train is a essentially a mathetical function that outputs the label
+of the closest embedding to the embedding that we provide as our test image.
 
 ### What is ArcFace?
 ArcFace is a loss function specifically designed for face recognition - this fixes the typical problem with SoftMax face recognition by attempting to cluster similar 
