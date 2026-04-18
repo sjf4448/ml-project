@@ -6,6 +6,9 @@ data/face_recognition_validation/*
 data/face_recognition_test/*
 data/face_recognition_output/*
 
+# Model Checkpoints
+checkpoints*
+
 # Keep folders
 !data/face_recognition_training/.gitkeep
 !data/face_recognition_validation/.gitkeep
