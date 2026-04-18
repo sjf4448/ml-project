@@ -7,6 +7,7 @@ Note: will be integrated into recogniton pipeline at the end with the pkl file.
 from __future__ import annotations
 
 import argparse
+from code.face_finder_core import ocnn_embedding_db
 from pathlib import Path
 
 from face_finder_core import (
@@ -123,13 +124,13 @@ def main() -> None:
         )
 
     elif args.command == "build-db":
-        ocnn_classifier.build_and_save_database(
+        ocnn_embedding_db.build_and_save_database(
             model_path=Path(args.model_path) if args.model_path else None,
             aggregate=not args.no_aggregate,
         )
 
     elif args.command == "evaluate":
-        ocnn_train.evaluate(
+        ocnn_classifier.evaluate(
             model_path=Path(args.model_path) if args.model_path else None,
             threshold=args.threshold,
         )

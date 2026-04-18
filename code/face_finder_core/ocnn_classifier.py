@@ -11,8 +11,10 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
+from tqdm import tqdm
 
 from .ocnn_config import (
+    CHECKPOINT_DIR,
     EMBEDDING_DIM,
     IMAGE_SIZE,
     MTCNN_MARGIN,
@@ -182,3 +184,61 @@ class FaceRecognizer:
     ) -> list[tuple[str, float]]:
         """Convenience wrapper for recognizing multiple images at once."""
         return [self.recognize(img, threshold) for img in pil_images]
+
+
+def evaluate(
+    model_path: Path | None = None,
+    threshold: float = 0.4,
+):
+    """
+    Runs recognition over the validation folder and reports accuracy stats.
+    Expects VAL_DIR to be structured as one subfolder per identity.
+    """
+    from .ocnn_config import VAL_DIR
+
+    model_path = model_path or (CHECKPOINT_DIR / "best_model.pt")
+
+    recognizer = FaceRecognizer(model_path=model_path, threshold=threshold)
+
+    total = 0
+    correct = 0
+    unknown = 0
+    wrong = 0
+
+    identity_dirs = sorted([d for d in VAL_DIR.iterdir() if d.is_dir()])
+
+    for identity_dir in tqdm(identity_dirs, desc="Evaluating"):
+        true_name = identity_dir.name
+        images = list(identity_dir.glob("*.jpg")) + list(identity_dir.glob("*.png"))
+
+        for img_path in images:
+            total += 1
+            pil_img = Image.open(img_path).convert("RGB")
+            pred_name, confidence = recognizer.recognize(pil_img, threshold=threshold)
+
+            if pred_name == "unknown":
+                unknown += 1
+            elif pred_name == true_name:
+                correct += 1
+            else:
+                wrong += 1
+
+    accuracy = correct / total if total > 0 else 0.0
+
+    logger.info(f"Evaluation complete over {total} images")
+    logger.info(f"  Correct  : {correct} ({accuracy:.1%})")
+    logger.info(f"  Unknown  : {unknown} ({unknown / total:.1%})")
+    logger.info(f"  Wrong    : {wrong}   ({wrong / total:.1%})")
+
+    print(f"\nResults ({total} images, threshold={threshold}):")
+    print(f"  Accuracy : {accuracy:.1%}")
+    print(f"  Unknown  : {unknown / total:.1%}")
+    print(f"  Wrong    : {wrong / total:.1%}")
+
+    return {
+        "total": total,
+        "correct": correct,
+        "unknown": unknown,
+        "wrong": wrong,
+        "accuracy": accuracy,
+    }
