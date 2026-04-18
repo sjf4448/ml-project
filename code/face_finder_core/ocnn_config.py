@@ -26,6 +26,7 @@ CHECKPOINT_DIR = PROJECT_ROOT / "checkpoints"
 BACKBONE = "resnet18"  # timm model name
 PRETRAINED = True  # ImageNet init
 EMBEDDING_DIM = 512
+MAX_IDENTITIES = 100  # Max Identities to train on
 
 # ── ArcFace ───────────────────────────────────────────────────────────────────
 

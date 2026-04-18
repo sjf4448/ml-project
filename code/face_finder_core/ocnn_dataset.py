@@ -164,18 +164,15 @@ def build_dataloaders(
     Returns (train_loader, val_loader, num_classes, label_encoder).
     The label encoder fitted on train is reused for val so classes are consistent.
     """
-    mtcnn = get_mtcnn(device)
 
     train_dataset = VGGFace2Dataset(
         root=TRAIN_DIR,
         transform=get_train_transforms(),
-        mtcnn=mtcnn,
     )
 
     val_dataset = VGGFace2Dataset(
         root=VAL_DIR,
         transform=get_val_transforms(),
-        mtcnn=mtcnn,
         label_encoder=train_dataset.label_encoder,  # reuse fitted encoder
     )
 

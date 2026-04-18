@@ -15,6 +15,7 @@ from face_finder_core import (
     ocnn_prepare,
     ocnn_train,
 )
+from face_finder_core.ocnn_config import MAX_IDENTITIES
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -110,6 +111,8 @@ def main() -> None:
     args = build_parser().parse_args()
 
     if args.command == "prepare":
+        if args.max_identities is None:
+            args.max_identities = MAX_IDENTITIES
         ocnn_prepare.run(
             max_identities=args.max_identities,
             min_images=args.min_images,

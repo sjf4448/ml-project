@@ -5,13 +5,12 @@ from pathlib import Path
 import kagglehub
 from tqdm import tqdm
 
-from .ocnn_config import TEST_DIR, TRAIN_DIR, VAL_DIR
+from .ocnn_config import MAX_IDENTITIES, TEST_DIR, TRAIN_DIR, VAL_DIR
 
 TRAIN_SPLIT = 0.80
 VAL_SPLIT = 0.10
 TEST_SPLIT = 0.10
 MIN_IMAGES = 10
-MAX_IDENTITIES = 500
 SEED = 42
 
 
