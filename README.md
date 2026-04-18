@@ -92,7 +92,7 @@ uv sync
 
 ### OCNN w/ ArcFace Pipeline - Step 1: `ocnn.py`
 
-As an alternative to the `face_recognition`/dlib embedding stack, the project includes a CNN training pipeline (`code/ocnn.py`) that fine-tunes a ResNet-18 on VGGFace2 using ArcFace metric learning. This produces a 512-d embedding model you own end-to-end.
+As an alternative to the `face_recognition`/dlib embedding stack, the project includes a CNN training pipeline (`code/ocnn.py`) that fine-tunes a ResNet-18 on VGGFace2 using ArcFace metric learning.
 
 Run the steps in order:
 
@@ -389,7 +389,7 @@ an embedding `x` will have it's logit calculated via $logit_i = s * cos(\theta_i
 used to push it into proper softmax/backpropogation range.
 
 For the correct class $\theta_y$, a margin `m` is added. This reduces the logit range, forcing the model to push the correct embeddings closer together to reduce loss. Mathematically this works
-since $cos(\theta + m) < cos(\theta)$
+since $cos(\theta + m) < cos(\theta)$, ie: the end result is always smaller than the original.
 
 ## Resource Links
 
