@@ -86,6 +86,8 @@ def gather_data() -> list:
 
                     record = data[0]
                     actual_name = Path(record["image_path"]).parent.name
+                    if actual_name == "unknown_faces":
+                        actual_name = "Unknown"
 
                     all_distances = record.get("all_distances")
                     if isinstance(all_distances, dict):
@@ -525,6 +527,7 @@ def generate_statistics():
     print(f"  Correct predictions:   {confidence_metrics['correct_predictions']}")
     print(f"  Incorrect predictions: {confidence_metrics['incorrect_predictions']}")
     print()
+
 
     if roc_report["micro_auc"] is not None:
         print(f"Micro-average ROC AUC: {roc_report['micro_auc']:.4f}")

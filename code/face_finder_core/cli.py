@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from .hyperparameter_trainer import train_tolerance_hyperparameter
 
 from .classifiers import available_classifier_names
 from .config import CLASSIFIER_PATH
@@ -9,6 +10,8 @@ from .recognition import FaceRecognizer
 from .training import FaceEncoder
 from .validation import ValidationRunner
 from .generate_statistics import generate_statistics
+from .recognizer_factory import RecognizerFactory
+from .hyperparameters import get_tolerance
 
 def build_parser() -> argparse.ArgumentParser:
     """Create CLI arguments for training, validation, and single-image testing."""
@@ -39,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-t",
         "--tolerance",
         type=float,
-        default=0.6,
+        default=get_tolerance(),
         help="Recognition tolerance. Lower is stricter. Typical values: 0.45 to 0.6",
     )
     parser.add_argument(
@@ -68,6 +71,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--statistics",
         action="store_true",
         help="Generate statistics about the validation (run after --validate to create the necessary data)",
+    )
+    parser.add_argument(
+        "--train-hyperparameter",
+        action="store_true",
+        help="Train the tolerance hyperparameter using the validation set",
     )
     return parser
 
@@ -107,9 +115,16 @@ def main() -> None:
         
     if args.statistics:
         generate_statistics()
+    
+    if args.train_hyperparameter:
+        recognizer_factory = RecognizerFactory(
+            classifier_path=classifier_path
+        )
+
+        train_tolerance_hyperparameter(recognizer_factory, model=args.model)
 
     if not any(
-        [args.train, args.train_classifier, args.validate, args.test, args.statistics]
+        [args.train, args.train_classifier, args.validate, args.test, args.statistics, args.train_hyperparameter]
     ):
         parser.print_help()
 

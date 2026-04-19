@@ -257,6 +257,12 @@ Generate statistics (after validation metadata exists):
 python code/face_finder.py --statistics
 ```
 
+Train hyperparameter based on selected classifier. The generated value will be used by all other files
+
+```bash
+python code/face_finder.py --train-hyperparameter
+```
+
 Webcam app:
 
 ```bash
