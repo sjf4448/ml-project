@@ -58,10 +58,20 @@ def train_tolerance_hyperparameter(recognizer_factory, model):
     print(f"Best tolerance found: {best.round(2)} with F1-score: {fine_results[best]:.4f}")
 
     with open(HYPERPARAMETERS_PATH, "r+") as f:
-        data = json.load(f)
-        data["tolerance"] = best.round(2)
+        content = f.read().strip()
+        if not content:
+            data = {}
+        else:
+            try:
+                data = json.loads(content)
+            except json.JSONDecodeError:
+                data = {}
+
+        data["tolerance"] = round(best, 2)
+
         f.seek(0)
         json.dump(data, f, indent=4)
+        f.truncate()
     return best
 
 
