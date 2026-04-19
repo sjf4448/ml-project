@@ -12,6 +12,9 @@ data/face_recognition_output/*
 !data/face_recognition_test/.gitkeep
 !data/face_recognition_output/.gitkeep
 
+#hyperparameter results
+data/hyperparameters.json
+
 # Model artifacts
 *.pkl
 

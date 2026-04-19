@@ -1,60 +1,84 @@
-import json
-
-from matplotlib.pyplot import get
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
-from numpy.compat import Path
-from sklearn.metrics import precision_recall_fscore_support
-
-from .recognition import FaceRecognizer
-
+from tqdm import tqdm
+import json
 from .validation import ValidationRunner
+from .generate_statistics_deterministic import generate_statistics_from_results
+from .config import HYPERPARAMETERS_PATH
 
-from .generate_statistics import generate_statistics
-"""
-Based on data saved to `data/face_recognition_output/classifier.pkl`, train the tolerance hyperparameter by evaluating recognition performance on the validation set. Starting with a first pass of tolerance=0.0, iterating up to 1.0 in incrememnts of 0.1.
-Then determine the optimal range to search more finely and return the best tolerance value based on F1 score. 
 
-    validation_data = {
-        "accuracy_report": accuracy_report,
-        "classification_metrics": classification_metrics,
-        "confidence_metrics": confidence_metrics,
-        "roc_report": roc_report, 
-    }
-"""
-def train_tolerance_hyperparameter(validator:ValidationRunner, model):
-    """
-    Iterate over a range of tolerance values, run validation, compute metrics. If The results are lower than the previous best, then iterate more finely around the previous best value. Return the best tolerance value based on F1 score.
-    """
-    path = Path("data/face_recognition_output/validation_summary.json")
-    last = 0
-    tolerance = 0.0
-    for tolerance in np.arange(0.0, 1.1, 0.1):
-        print(f"\n\n\nTesting tolerance: {tolerance.round(2)}\n\n\n")
-        validator.run(model=model, tolerance=tolerance)
-        generate_statistics()
-        with open(path, "r") as f:
-            validation_data = json.load(f)
-            f1_score = validation_data["classification_metrics"]["macro_avg"].get("f1-score", 0.0)
-            if f1_score < last:
-                break
-            last = f1_score
-    # Iterate more finely around the previous best value
-    print(f"\n\n\nBest tolerance so far: {tolerance.round(2) - 0.1} with F1 score: {last}\nRefining Search...\n\n\n")
-    best_tolerance = tolerance - 0.2 if tolerance > 0.2 else 0.0
-    last = -1
-    for tolerance in np.arange(best_tolerance, best_tolerance + 0.3, 0.05):
-        print(f"\n\n\nTesting tolerance: {tolerance.round(2)}\n\n\n")
-        validator.run(model=model, tolerance=tolerance)
-        generate_statistics()
-        with open(path, "r") as f:
-            validation_data = json.load(f)
-            f1_score = validation_data["classification_metrics"]["macro_avg"].get("f1-score", 0.0)
-            if last == -1:
-                last = f1_score
-            if f1_score >= last:
-                last = f1_score
-                best_tolerance = tolerance
-            else:
-                break
-    print(f"Best tolerance: {best_tolerance} with F1 score: {last}")
-    return best_tolerance
+def _evaluate_tolerance(args):
+    tolerance, model, recognizer_factory = args
+
+    recognizer = recognizer_factory()  # fresh instance
+
+    validator = ValidationRunner(
+        recognizer=recognizer
+    )
+
+    with suppress_output():
+        results = validator.run_deterministic(model=model, tolerance=tolerance)
+        stats = generate_statistics_from_results(results)
+
+    return tolerance, stats
+
+
+def _parallel_search(tolerances, model, recognizer_factory):
+    results = {}
+    total = len(tolerances)
+
+    with ProcessPoolExecutor() as executor:
+        with tqdm(total=total, desc="Evaluating tolerances") as pbar:
+
+            for t, stats in executor.map(
+                _evaluate_tolerance,
+                [(t, model, recognizer_factory) for t in tolerances]
+            ):
+                score = stats["classification_metrics"]["macro_avg"].get("f1-score", 0.0)
+                results[t] = score
+
+                pbar.set_postfix({"last_tol": round(t, 2), "f1": round(score, 4)})
+                pbar.update(1)
+
+    return results
+
+
+def train_tolerance_hyperparameter(recognizer_factory, model):
+    coarse = np.arange(0.0, 1.0, 0.1)
+    print("Starting coarse search for tolerance hyperparameter...")
+    coarse_results = _parallel_search(coarse, model, recognizer_factory)
+
+    best = min(coarse_results, key=lambda t: (-coarse_results[t], t))
+    print("starting fine search around best coarse tolerance: ", best)
+    fine = np.arange(max(0, best - 0.1), min(best + 0.1, 1.0), 0.01)
+    fine_results = _parallel_search(fine, model, recognizer_factory)
+
+    best = min(fine_results, key=lambda t: (-fine_results[t], t))
+
+    print(f"Best tolerance found: {best.round(2)} with F1-score: {fine_results[best]:.4f}")
+
+    with open(HYPERPARAMETERS_PATH, "r+") as f:
+        data = json.load(f)
+        data["tolerance"] = best.round(2)
+        f.seek(0)
+        json.dump(data, f, indent=4)
+    return best
+
+
+
+import os
+from contextlib import redirect_stdout, redirect_stderr
+
+
+class suppress_output:
+    def __enter__(self):
+        self.null = open(os.devnull, "w")
+        self._stdout = redirect_stdout(self.null)
+        self._stderr = redirect_stderr(self.null)
+        self._stdout.__enter__()
+        self._stderr.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._stdout.__exit__(exc_type, exc_val, exc_tb)
+        self._stderr.__exit__(exc_type, exc_val, exc_tb)
+        self.null.close()

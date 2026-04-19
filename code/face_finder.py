@@ -24,6 +24,7 @@ from face_finder_core import (
     ensure_directories,
 )
 from face_finder_core.cli import build_parser, main
+from face_finder_core.hyperparameters import get_tolerance
 
 __all__ = [
     "ANNOTATED_DIR",
@@ -55,7 +56,7 @@ def recognize_faces(
     image_location: str,
     model: str = "hog",
     encodings_location: Path = ENCODINGS_PATH,
-    tolerance: float = 0.6,
+    tolerance: float = get_tolerance(),
     save_output: bool = True,
     show_image: bool = False,
 ) -> list[DetectionResult]:
@@ -70,7 +71,7 @@ def recognize_faces(
     )
 
 
-def validate(model: str = "hog", tolerance: float = 0.6) -> None:
+def validate(model: str = "hog", tolerance: float = get_tolerance()) -> None:
     """Compatibility function that delegates to `ValidationRunner`."""
     recognizer = FaceRecognizer()
     ValidationRunner(recognizer=recognizer).run(model=model, tolerance=tolerance)

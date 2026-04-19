@@ -6,6 +6,7 @@ from pathlib import Path
 from face_finder_core.config import CLASSIFIER_PATH
 from face_finder_core.recognition import FaceRecognizer
 from face_finder_core.webcam import WebcamCaptureSession
+from face_finder_core.hyperparameters import get_tolerance
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -22,7 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-t",
         "--tolerance",
         type=float,
-        default=0.6,
+        default=get_tolerance(),
         help="Recognition tolerance. Lower is stricter. Typical values: 0.45 to 0.6",
     )
     parser.add_argument(
@@ -56,6 +57,7 @@ def main() -> None:
         tolerance=args.tolerance,
         camera_index=args.camera_index,
     )
+    print("Tolerance set to:", args.tolerance)
     session.run()
 
 
