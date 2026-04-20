@@ -178,7 +178,7 @@ Output files written to `data/face_recognition_output/`:
 Run:
 
 ```bash
-python code/get_faces.py
+python code/get_faces.py --lfw
 ```
 
 What it does:
@@ -186,6 +186,13 @@ What it does:
 - Writes train/validation splits to:
   - `data/face_recognition_training/<person_name>/...`
   - `data/face_recognition_validation/<person_name>/...`
+
+**AND/OR**
+
+```bash
+python code/get_faces.py --known
+```
+What it does:
 - Imports local user images from `data/known_faces/<name>/...` into train/validation
 
 ### Step 2: Encode training faces into embeddings
